@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileQuery } from './query';
+import { compileQuery, suggest } from './query';
 import type { Finding, FindingStatus } from './types';
 
 function finding(extra: Partial<Finding> = {}): Finding {
@@ -72,28 +72,34 @@ describe('compileQuery', () => {
   it('ORs values of the same key and ANDs different keys', () => {
     expect(names('sev:high,critical')).toEqual(['app/models/user.ts', 'app/db.rb']);
     expect(names('sev:high sev:critical')).toEqual(['app/models/user.ts', 'app/db.rb']);
-    expect(names('sev:high,critical path:*.rb')).toEqual(['app/db.rb']);
+    expect(names('sev:high,critical file:*.rb')).toEqual(['app/db.rb']);
   });
 
   it('matches globs against the whole path, across directories', () => {
-    expect(names('path:*.ts')).toEqual(['app/models/user.ts', 'app/models/user.test.ts']);
-    expect(names('path:*.TEST.ts')).toEqual(['app/models/user.test.ts']);
+    expect(names('file:*.ts')).toEqual(['app/models/user.ts', 'app/models/user.test.ts']);
+    expect(names('file:*.TEST.ts')).toEqual(['app/models/user.test.ts']);
     expect(names('file:app/*/user.?s')).toEqual(['app/models/user.ts']);
   });
 
   it('matches values without wildcards as substrings', () => {
-    expect(names('path:models/')).toEqual(['app/models/user.ts', 'app/models/user.test.ts']);
+    expect(names('file:models/')).toEqual(['app/models/user.ts', 'app/models/user.test.ts']);
+  });
+
+  it('accepts path: as an alias for file:', () => {
+    expect(names('path:*.rb')).toEqual(['app/db.rb']);
+    // Aliases share a field, so they OR together like a repeated key.
+    expect(names('path:*.rb file:*.json')).toEqual(['app/db.rb', 'package-lock.json']);
   });
 
   it('negates with a leading - or a ! on the value', () => {
-    expect(names('path:!*.ts')).toEqual(['app/db.rb', 'package-lock.json']);
-    expect(names('-path:*.ts')).toEqual(['app/db.rb', 'package-lock.json']);
+    expect(names('file:!*.ts')).toEqual(['app/db.rb', 'package-lock.json']);
+    expect(names('-file:*.ts')).toEqual(['app/db.rb', 'package-lock.json']);
     expect(names('-secret')).toHaveLength(3);
     // Every exclusion holds, and a comma list excludes any of its values.
-    expect(names('-path:*.ts -path:*.rb')).toEqual(['package-lock.json']);
-    expect(names('path:!*.ts,*.rb')).toEqual(['package-lock.json']);
+    expect(names('-file:*.ts -file:*.rb')).toEqual(['package-lock.json']);
+    expect(names('file:!*.ts,*.rb')).toEqual(['package-lock.json']);
     // Two negations cancel out.
-    expect(names('-path:!*.rb')).toEqual(['app/db.rb']);
+    expect(names('-file:!*.rb')).toEqual(['app/db.rb']);
   });
 
   it('filters by report type, identifier, scanner and dependency', () => {
@@ -129,8 +135,62 @@ describe('compileQuery', () => {
   });
 
   it('does not treat regex characters in values as special', () => {
-    expect(names('path:app/(db).rb')).toEqual([]);
-    expect(names('path:app/db.rb')).toEqual(['app/db.rb']);
-    expect(names('path:app/db+rb')).toEqual([]);
+    expect(names('file:app/(db).rb')).toEqual([]);
+    expect(names('file:app/db.rb')).toEqual(['app/db.rb']);
+    expect(names('file:app/db+rb')).toEqual([]);
+  });
+});
+
+describe('suggest', () => {
+  function labels(input: string, cursor = input.length): string[] {
+    return suggest(input, cursor).items.map((item) => item.label);
+  }
+
+  /** The input after picking the first suggestion, as the widget does it. */
+  function pick(input: string, cursor = input.length): string {
+    const { from, items } = suggest(input, cursor);
+    return input.slice(0, from) + items[0].insert + input.slice(cursor);
+  }
+
+  it('offers keys for a term without a colon', () => {
+    expect(labels('se')).toEqual(['severity:', 'sev:']);
+    expect(labels('sev:high s')).toEqual(['severity:', 'sev:', 'scanner:']);
+    expect(pick('sev:high fi')).toBe('sev:high file:');
+    // The alias still works when typed, but is not offered.
+    expect(labels('pa')).toEqual([]);
+  });
+
+  it('offers nothing for an empty or quoted term', () => {
+    expect(labels('')).toEqual([]);
+    expect(labels('sev:high ')).toEqual([]);
+    expect(labels('"se')).toEqual([]);
+  });
+
+  it('keeps a leading minus', () => {
+    expect(pick('-fi')).toBe('-file:');
+  });
+
+  it('offers values for keys with a fixed set', () => {
+    expect(labels('sev:')).toEqual(['critical', 'high', 'medium', 'low', 'info', 'unknown']);
+    expect(labels('is:n')).toEqual(['new']);
+    expect(labels('type:d')).toEqual(['dependency_scanning', 'dast']);
+    expect(labels('file:')).toEqual([]);
+    expect(labels('colour:')).toEqual([]);
+  });
+
+  it('completes after negation, comparisons and commas', () => {
+    expect(pick('sev:>=h')).toBe('sev:>=high ');
+    expect(pick('is:!n')).toBe('is:!new ');
+    expect(pick('sev:high,c')).toBe('sev:high,critical ');
+    expect(pick('-severity:i')).toBe('-severity:info ');
+  });
+
+  it('completes the term at the cursor, not the end', () => {
+    expect(pick('se file:x', 2)).toBe('severity: file:x');
+  });
+
+  it('drops a suggestion that is already typed out', () => {
+    expect(labels('sev:high')).toEqual([]);
+    expect(labels('is')).toEqual([]);
   });
 });

@@ -92,7 +92,7 @@ and it only filters the list: the header's summary, colour and counts keep descr
 so a search cannot make a merge request look clean.
 
 ```
-severity:>=high path:!*.test.ts -scanner:semgrep is:new xss
+severity:>=high file:!*.test.ts -scanner:semgrep is:new xss
 ```
 
 | Term | Matches |
@@ -100,7 +100,7 @@ severity:>=high path:!*.test.ts -scanner:semgrep is:new xss
 | `xss`, `"sql injection"` | name, location, identifiers, scanner or dependency containing the text |
 | `severity:high`, `sev:>=high`, `sev:<medium` | a severity, or a range of them (`>=high` is high or worse) |
 | `type:sast`, `type:dependency` | report type |
-| `path:*.ts`, `file:src/` | file, URL path or location label |
+| `file:*.ts`, `file:src/` (alias `path:`) | file, URL path or location label |
 | `id:CWE-79`, `id:CVE-2024-*` | identifiers |
 | `scanner:semgrep`, `dep:lodash`, `name:secret` | scanner, dependency/package/image, finding name |
 | `is:new`, `is:existing`, `is:uncomparable`, `is:fixed`, `is:fp` | comparison status, or flagged as a likely false positive |
@@ -108,8 +108,10 @@ severity:>=high path:!*.test.ts -scanner:semgrep is:new xss
 Every term has to match. Repeating a key or giving it a comma list (`sev:high,critical`) matches any
 of the values. Prefix a term with `-` or its value with `!` to exclude it. Values with `*` or `?` are
 globs over the whole field (`*` crosses `/`); anything else matches as a substring, ignoring case.
-Terms it cannot use are named under the box and skipped. Esc clears the search. The search box can be
-hidden from the options page.
+Terms it cannot use are named under the box and skipped. Keys, and the values of `severity`, `type`
+and `is`, are suggested as you type: arrow keys pick one, Tab or Enter completes it, and Esc closes the
+suggestions or, once they are closed, clears the search. The search box can be hidden from the options
+page.
 
 ### New vs. existing findings
 

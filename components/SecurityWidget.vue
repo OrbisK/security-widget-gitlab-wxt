@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from 'vue';
+import { computed, ref, shallowRef, useId, useTemplateRef, watch } from 'vue';
 import FindingItem from './FindingItem.vue';
 import SeverityPills from './SeverityPills.vue';
-import { compileQuery, QUERY_HELP } from '@/lib/query';
+import { compileQuery, QUERY_HELP, suggest, type Suggestion } from '@/lib/query';
 import { countBySeverity, severityRank } from '@/lib/severity';
 import type { Settings } from '@/lib/storage';
 import {
@@ -32,6 +32,63 @@ const shown = ref<Record<string, number>>({});
 /** Lives only as long as the page: a search is a question, not a preference. */
 const query = shallowRef(props.initialQuery ?? '');
 const compiledQuery = computed(() => compileQuery(query.value));
+
+const searchInput = useTemplateRef<HTMLInputElement>('searchInput');
+const suggestionsId = useId();
+/** Where the cursor is, which decides which term is being completed. */
+const cursor = shallowRef(0);
+/** Closed by Esc or blur, reopened by typing. */
+const suggesting = shallowRef(false);
+const activeSuggestion = shallowRef(0);
+
+const suggestions = computed(() =>
+  suggesting.value ? suggest(query.value, cursor.value) : { from: 0, items: [] },
+);
+
+watch(suggestions, () => {
+  activeSuggestion.value = 0;
+});
+
+function syncCursor(): void {
+  cursor.value = searchInput.value?.selectionStart ?? query.value.length;
+}
+
+function onSearchInput(): void {
+  syncCursor();
+  suggesting.value = true;
+}
+
+/**
+ * Edits the input in place, which also leaves the cursor after the insertion,
+ * and then takes the model from it — so Vue finds nothing to write back and
+ * the cursor stays put.
+ */
+function pickSuggestion(item: Suggestion): void {
+  const input = searchInput.value;
+  if (!input) return;
+  input.setRangeText(item.insert, suggestions.value.from, cursor.value, 'end');
+  query.value = input.value;
+  syncCursor();
+}
+
+function onSearchKeydown(event: KeyboardEvent): void {
+  const { items } = suggestions.value;
+  if (event.key === 'Escape') {
+    // First Esc closes the suggestions, the next one clears the search.
+    if (items.length) suggesting.value = false;
+    else query.value = '';
+    return;
+  }
+  if (!items.length) return;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    activeSuggestion.value = (activeSuggestion.value + step + items.length) % items.length;
+  } else if (event.key === 'Enter' || event.key === 'Tab') {
+    event.preventDefault();
+    pickSuggestion(items[activeSuggestion.value]);
+  }
+}
 
 /** Reports keep their own findings so each section can be filtered and paged. */
 interface ReportSection {
@@ -492,20 +549,56 @@ const isCollapsible = computed(
       <div v-if="showSearch" class="glsw-search">
         <div class="glsw-search-row">
           <input
-            v-model.trim="query"
+            ref="searchInput"
+            v-model="query"
             class="glsw-search-input"
             type="search"
-            placeholder="Filter, e.g. severity:>=high path:!*.test.ts"
+            role="combobox"
+            placeholder="Filter, e.g. severity:>=high file:!*.test.ts"
             aria-label="Filter findings"
+            aria-autocomplete="list"
+            :aria-expanded="suggestions.items.length > 0"
+            :aria-controls="suggestionsId"
+            :aria-activedescendant="
+              suggestions.items.length ? `${suggestionsId}-${activeSuggestion}` : undefined
+            "
             :title="QUERY_HELP"
             spellcheck="false"
             autocomplete="off"
-            @keydown.esc="query = ''"
+            @input="onSearchInput"
+            @click="syncCursor"
+            @keyup.left.right.home.end="syncCursor"
+            @keydown="onSearchKeydown"
+            @blur="suggesting = false"
           />
           <span v-if="!compiledQuery.isEmpty" class="glsw-muted glsw-search-count">
             {{ searchMatches }} of {{ searchable }} match
           </span>
         </div>
+        <!-- In the flow rather than floating: the widget clips overflow, and a
+             dropdown would be cut off when the list below it is short. -->
+        <ul
+          v-show="suggestions.items.length"
+          :id="suggestionsId"
+          class="glsw-suggestions"
+          role="listbox"
+          aria-label="Suggestions"
+        >
+          <li
+            v-for="(item, index) in suggestions.items"
+            :id="`${suggestionsId}-${index}`"
+            :key="item.label"
+            class="glsw-suggestion"
+            :class="{ 'glsw-suggestion-active': index === activeSuggestion }"
+            role="option"
+            :aria-selected="index === activeSuggestion"
+            @mousedown.prevent="pickSuggestion(item)"
+          >
+            {{ item.label }}
+          </li>
+          <li class="glsw-muted glsw-suggestions-hint" aria-hidden="true">Tab to complete</li>
+        </ul>
+
         <p v-for="error in compiledQuery.errors" :key="error.term" class="glsw-sub glsw-danger-text">
           Ignoring <span class="glsw-mono">{{ error.term }}</span>: {{ error.message }}
         </p>

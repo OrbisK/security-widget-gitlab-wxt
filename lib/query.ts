@@ -1,6 +1,7 @@
 import { severityRank } from './severity';
 import {
   REPORT_TYPE_LABELS,
+  SECURITY_REPORT_TYPES,
   SEVERITIES,
   type Finding,
   type FindingStatus,
@@ -10,7 +11,7 @@ import {
 /**
  * A small filter language for the widget's search box, e.g.
  *
- *   severity:>=high path:!*.test.ts -scanner:semgrep is:new xss
+ *   severity:>=high file:!*.test.ts -scanner:semgrep is:new xss
  *
  * - Whitespace separates terms, and every term has to match (AND).
  * - The same key given more than once, or a comma list (`sev:high,critical`),
@@ -18,7 +19,7 @@ import {
  * - `-key:value` and `key:!value` both negate a term.
  * - A bare word is a case-insensitive substring search over the finding's name,
  *   location, identifiers, scanner and dependency.
- * - Double quotes keep spaces in a value: `path:"my dir/*"`, `"sql injection"`.
+ * - Double quotes keep spaces in a value: `file:"my dir/*"`, `"sql injection"`.
  * - Values containing `*` or `?` are globs matched against the whole field
  *   (`*` spans `/`, so `*.ts` matches `src/a/b.ts`); anything else is a substring.
  *
@@ -46,8 +47,8 @@ const FIELDS = {
   sev: 'severity',
   type: 'type',
   report: 'type',
-  path: 'path',
-  file: 'path',
+  file: 'file',
+  path: 'file',
   id: 'id',
   scanner: 'scanner',
   dep: 'dep',
@@ -61,8 +62,8 @@ type Field = (typeof FIELDS)[keyof typeof FIELDS];
 const IS_VALUES = ['new', 'existing', 'uncomparable', 'fixed', 'fp'] as const;
 
 export const QUERY_HELP =
-  'Filter findings, e.g. severity:>=high path:!*.test.ts -scanner:semgrep is:new\n' +
-  'Keys: severity (sev), type, path (file), id, scanner, dep, name, is:new|existing|uncomparable|fixed|fp\n' +
+  'Filter findings, e.g. severity:>=high file:!*.test.ts -scanner:semgrep is:new\n' +
+  'Keys: severity (sev), type, file (path), id, scanner, dep, name, is:new|existing|uncomparable|fixed|fp\n' +
   'Prefix a term with - or its value with ! to exclude; commas mean "any of"; * and ? are wildcards.';
 
 interface Token {
@@ -176,7 +177,7 @@ function fieldMatcher(field: Field, value: string): Matcher | string {
     case 'type':
       return (finding) =>
         anyOf([finding.reportType, REPORT_TYPE_LABELS[finding.reportType]], match);
-    case 'path':
+    case 'file':
       return (finding) => anyOf([finding.file, finding.path, finding.locationLabel], match);
     case 'id':
       return (finding) => anyOf(finding.identifiers, match);
@@ -254,4 +255,67 @@ export function compileQuery(input: string): CompiledQuery {
       );
     },
   };
+}
+
+export interface Suggestion {
+  /** What the list shows. */
+  label: string;
+  /** Replaces the input between `from` and the cursor. */
+  insert: string;
+}
+
+export interface Suggestions {
+  from: number;
+  items: Suggestion[];
+}
+
+/** The keys offered while typing, one per field plus the aliases people reach for. */
+const SUGGESTED_KEYS = ['severity', 'sev', 'type', 'file', 'id', 'scanner', 'dep', 'name', 'is'];
+
+/** Values worth completing: the fields whose values come from a fixed set. */
+const SUGGESTED_VALUES: Partial<Record<Field, readonly string[]>> = {
+  severity: SEVERITIES,
+  is: IS_VALUES,
+  type: SECURITY_REPORT_TYPES,
+};
+
+/**
+ * Completions for the term the cursor is in: keys while it has no `:` yet, and
+ * values for keys that have a fixed set of them. Quotes are not considered,
+ * which only matters for values with spaces — and none of the completed ones
+ * have any.
+ */
+export function suggest(input: string, cursor: number): Suggestions {
+  const before = input.slice(0, cursor);
+  const termStart = before.search(/\S*$/);
+  let term = before.slice(termStart);
+  let offset = termStart;
+
+  if (term.startsWith('-')) {
+    term = term.slice(1);
+    offset += 1;
+  }
+
+  const colon = term.indexOf(':');
+  if (colon === -1) {
+    if (!term || term.startsWith('"')) return { from: cursor, items: [] };
+    const partial = term.toLowerCase();
+    const items = SUGGESTED_KEYS.filter((key) => key.startsWith(partial) && key !== partial).map(
+      (key) => ({ label: `${key}:`, insert: `${key}:` }),
+    );
+    return { from: offset, items };
+  }
+
+  const key = term.slice(0, colon).toLowerCase();
+  const values = key in FIELDS ? SUGGESTED_VALUES[FIELDS[key as keyof typeof FIELDS]] : undefined;
+  if (!values) return { from: cursor, items: [] };
+
+  // Complete only the last comma-separated value, after any `!` or comparison.
+  const valueStart = term.lastIndexOf(',') + 1 || colon + 1;
+  const prefix = /^!?(?:>=|<=|>|<|=)?/.exec(term.slice(valueStart))![0];
+  const partial = term.slice(valueStart + prefix.length).toLowerCase();
+  const items = values
+    .filter((value) => value.startsWith(partial) && value !== partial)
+    .map((value) => ({ label: value, insert: `${value} ` }));
+  return { from: offset + valueStart + prefix.length, items };
 }

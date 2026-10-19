@@ -233,7 +233,7 @@ describe('SecurityWidget search', () => {
   });
 
   it('says when a section has findings but none match', async () => {
-    const html = await render([report([sqlInjection])], { query: 'path:*.ts' });
+    const html = await render([report([sqlInjection])], { query: 'file:*.ts' });
 
     expect(html).toContain('No findings match the search.');
     expect(html).toContain('glsw-tone-warning');
