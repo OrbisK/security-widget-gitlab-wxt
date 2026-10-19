@@ -222,6 +222,11 @@ async function remove(origin: string): Promise<void> {
       </label>
 
       <label class="ui-field">
+        <input v-model="current.showSearch" type="checkbox" />
+        <span>Show a search box above the findings</span>
+      </label>
+
+      <label class="ui-field">
         <input v-model="current.hideLikelyFalsePositives" type="checkbox" />
         <span>Hide findings the scanner flagged as likely false positives</span>
       </label>

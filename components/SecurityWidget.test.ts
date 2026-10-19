@@ -31,7 +31,12 @@ const base: BasePipeline = {
 /** A widget rendered from head reports, optionally compared with base ones. */
 async function render(
   head: ParsedReport[],
-  options: { base?: ParsedReport[]; comparison?: ComparisonState; settings?: Partial<Settings> } = {},
+  options: {
+    base?: ParsedReport[];
+    comparison?: ComparisonState;
+    settings?: Partial<Settings>;
+    query?: string;
+  } = {},
 ): Promise<string> {
   const findings = head.flatMap((report) => report.findings);
   const comparison: ComparisonState = options.base
@@ -52,6 +57,7 @@ async function render(
       h(SecurityWidget, {
         state: { status: 'ok', result },
         settings: { ...DEFAULT_SETTINGS, startCollapsed: false, ...options.settings },
+        initialQuery: options.query,
       }),
     ),
   );
@@ -206,5 +212,55 @@ describe('SecurityWidget header', () => {
     expect(html).toContain('Finding 4');
     expect(html).not.toContain('Finding 5');
     expect(html).toContain('Show 3 more of 8');
+  });
+});
+
+describe('SecurityWidget search', () => {
+  it('narrows the list without touching the header', async () => {
+    const html = await render([report([sqlInjection, hardcodedSecret])], {
+      base: [report([sqlInjection])],
+      query: 'sev:high',
+    });
+
+    expect(html).toContain('Possible SQL injection');
+    expect(html).not.toContain('Hardcoded secret');
+    expect(html).toContain('1 of 2 match');
+    // The new critical finding is filtered out of the list, but the header still
+    // reports it.
+    expect(html).toContain('glsw-tone-danger');
+    expect(html).toContain('This merge request adds 1 potential vulnerability');
+    expect(html).not.toContain('hidden by filters');
+  });
+
+  it('says when a section has findings but none match', async () => {
+    const html = await render([report([sqlInjection])], { query: 'path:*.ts' });
+
+    expect(html).toContain('No findings match the search.');
+    expect(html).toContain('glsw-tone-warning');
+  });
+
+  it('names the terms it ignored', async () => {
+    const html = await render([report([sqlInjection])], { query: 'colour:red' });
+
+    expect(html).toContain('Possible SQL injection');
+    expect(html).toContain('unknown key');
+  });
+
+  it('applies to fixed findings too', async () => {
+    const html = await render([report([sqlInjection])], {
+      base: [report([sqlInjection, hardcodedSecret])],
+      query: '-is:fixed',
+    });
+
+    expect(html).not.toContain('Fixed by this merge request');
+    expect(html).toContain('1 fixed here');
+  });
+
+  it('is not offered when switched off or when there is nothing to search', async () => {
+    const off = await render([report([sqlInjection])], { settings: { showSearch: false } });
+    const empty = await render([report([])]);
+
+    expect(off).not.toContain('glsw-search');
+    expect(empty).not.toContain('glsw-search');
   });
 });

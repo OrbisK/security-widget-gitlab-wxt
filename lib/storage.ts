@@ -35,6 +35,8 @@ export interface Settings {
   verboseLogging: boolean;
   /** How many findings a report section lists before "show more". */
   findingsPerPage: number;
+  /** Show a search box above the findings. What is typed into it is not stored. */
+  showSearch: boolean;
   /**
    * How many base pipeline candidates the comparison tries before giving up.
    *
@@ -59,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showOnlyNew: false,
   verboseLogging: false,
   findingsPerPage: 20,
+  showSearch: true,
   maxBasePipelines: 3,
   childPipelineDepth: 1,
 };
