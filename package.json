@@ -2,7 +2,7 @@
   "name": "security-widget-for-gitlab",
   "description": "Renders the security report artifacts a merge request pipeline already produces as a summary on the merge request page",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "packageManager": "pnpm@10.34.1",
   "scripts": {
