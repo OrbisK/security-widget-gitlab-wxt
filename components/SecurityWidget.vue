@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef, watch } from 'vue';
+import { computed, ref, shallowRef, useId, useTemplateRef, watch } from 'vue';
 import FindingItem from './FindingItem.vue';
 import SeverityPills from './SeverityPills.vue';
+import { compileQuery, QUERY_HELP, suggest, type Suggestion } from '@/lib/query';
 import { countBySeverity, severityRank } from '@/lib/severity';
 import type { Settings } from '@/lib/storage';
 import {
@@ -13,7 +14,12 @@ import {
   type WidgetState,
 } from '@/lib/types';
 
-const props = defineProps<{ state: WidgetState; settings: Settings }>();
+const props = defineProps<{
+  state: WidgetState;
+  settings: Settings;
+  /** Prefills the search box; lets a server-rendered test see a filtered list. */
+  initialQuery?: string;
+}>();
 
 const FIXED_KEY = 'fixed';
 /** Enough of a commit sha to identify it, which is what GitLab itself shows. */
@@ -23,6 +29,66 @@ const pageSize = computed(() => props.settings.findingsPerPage);
 
 const collapsed = shallowRef(props.settings.startCollapsed);
 const shown = ref<Record<string, number>>({});
+/** Lives only as long as the page: a search is a question, not a preference. */
+const query = shallowRef(props.initialQuery ?? '');
+const compiledQuery = computed(() => compileQuery(query.value));
+
+const searchInput = useTemplateRef<HTMLInputElement>('searchInput');
+const suggestionsId = useId();
+/** Where the cursor is, which decides which term is being completed. */
+const cursor = shallowRef(0);
+/** Closed by Esc or blur, reopened by typing. */
+const suggesting = shallowRef(false);
+const activeSuggestion = shallowRef(0);
+
+const suggestions = computed(() =>
+  suggesting.value ? suggest(query.value, cursor.value) : { from: 0, items: [] },
+);
+
+watch(suggestions, () => {
+  activeSuggestion.value = 0;
+});
+
+function syncCursor(): void {
+  cursor.value = searchInput.value?.selectionStart ?? query.value.length;
+}
+
+function onSearchInput(): void {
+  syncCursor();
+  suggesting.value = true;
+}
+
+/**
+ * Edits the input in place, which also leaves the cursor after the insertion,
+ * and then takes the model from it — so Vue finds nothing to write back and
+ * the cursor stays put.
+ */
+function pickSuggestion(item: Suggestion): void {
+  const input = searchInput.value;
+  if (!input) return;
+  input.setRangeText(item.insert, suggestions.value.from, cursor.value, 'end');
+  query.value = input.value;
+  syncCursor();
+}
+
+function onSearchKeydown(event: KeyboardEvent): void {
+  const { items } = suggestions.value;
+  if (event.key === 'Escape') {
+    // First Esc closes the suggestions, the next one clears the search.
+    if (items.length) suggesting.value = false;
+    else query.value = '';
+    return;
+  }
+  if (!items.length) return;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    activeSuggestion.value = (activeSuggestion.value + step + items.length) % items.length;
+  } else if (event.key === 'Enter' || event.key === 'Tab') {
+    event.preventDefault();
+    pickSuggestion(items[activeSuggestion.value]);
+  }
+}
 
 /** Reports keep their own findings so each section can be filtered and paged. */
 interface ReportSection {
@@ -99,6 +165,21 @@ const sections = computed<ReportSection[]>(() =>
   }),
 );
 
+/**
+ * What the list shows: the sections above, narrowed by the search. Kept apart
+ * from `sections` on purpose — everything in the header (summary, tone, pills,
+ * the hidden-by-filters count) reads from those, so a search can narrow the list
+ * but never talk the header into calling the merge request clean.
+ */
+const listedSections = computed(() =>
+  sections.value.map((section) => ({
+    ...section,
+    listed: compiledQuery.value.isEmpty
+      ? section.findings
+      : section.findings.filter((finding) => compiledQuery.value.test(finding, statusOf(finding))),
+  })),
+);
+
 const visibleFindings = computed(() => sections.value.flatMap((section) => section.findings));
 const visibleCounts = computed(() => countBySeverity(visibleFindings.value));
 
@@ -163,6 +244,26 @@ const hiddenAsExisting = computed(() =>
 /** Fixed findings obey the severity filter, but not the show-only-new one. */
 const fixedFindings = computed(() =>
   (comparison.value?.fixed ?? []).filter(passesSeverityFilter),
+);
+
+const listedFixed = computed(() =>
+  compiledQuery.value.isEmpty
+    ? fixedFindings.value
+    : fixedFindings.value.filter((finding) => compiledQuery.value.test(finding, 'fixed')),
+);
+
+/** Only offered when there is a list to narrow. */
+const showSearch = computed(
+  () =>
+    props.settings.showSearch &&
+    (visibleFindings.value.length > 0 || fixedFindings.value.length > 0),
+);
+
+const searchable = computed(() => visibleFindings.value.length + fixedFindings.value.length);
+const searchMatches = computed(
+  () =>
+    listedSections.value.reduce((sum, section) => sum + section.listed.length, 0) +
+    listedFixed.value.length,
 );
 
 const failedReports = computed(() => (result.value?.reports ?? []).filter((report) => report.error));
@@ -310,6 +411,7 @@ watch(
     props.settings.hideLikelyFalsePositives,
     props.settings.showOnlyNew,
     props.settings.findingsPerPage,
+    query.value,
   ],
   () => {
     shown.value = {};
@@ -444,7 +546,65 @@ const isCollapsible = computed(
     </div>
 
     <div v-if="state.status === 'ok' && !collapsed" class="glsw-body">
-      <div v-for="section in sections" :key="section.key" class="glsw-section">
+      <div v-if="showSearch" class="glsw-search">
+        <div class="glsw-search-row">
+          <input
+            ref="searchInput"
+            v-model="query"
+            class="glsw-search-input"
+            type="search"
+            role="combobox"
+            placeholder="Filter, e.g. severity:>=high file:!*.test.ts"
+            aria-label="Filter findings"
+            aria-autocomplete="list"
+            :aria-expanded="suggestions.items.length > 0"
+            :aria-controls="suggestionsId"
+            :aria-activedescendant="
+              suggestions.items.length ? `${suggestionsId}-${activeSuggestion}` : undefined
+            "
+            :title="QUERY_HELP"
+            spellcheck="false"
+            autocomplete="off"
+            @input="onSearchInput"
+            @click="syncCursor"
+            @keyup.left.right.home.end="syncCursor"
+            @keydown="onSearchKeydown"
+            @blur="suggesting = false"
+          />
+          <span v-if="!compiledQuery.isEmpty" class="glsw-muted glsw-search-count">
+            {{ searchMatches }} of {{ searchable }} match
+          </span>
+        </div>
+        <!-- In the flow rather than floating: the widget clips overflow, and a
+             dropdown would be cut off when the list below it is short. -->
+        <ul
+          v-show="suggestions.items.length"
+          :id="suggestionsId"
+          class="glsw-suggestions"
+          role="listbox"
+          aria-label="Suggestions"
+        >
+          <li
+            v-for="(item, index) in suggestions.items"
+            :id="`${suggestionsId}-${index}`"
+            :key="item.label"
+            class="glsw-suggestion"
+            :class="{ 'glsw-suggestion-active': index === activeSuggestion }"
+            role="option"
+            :aria-selected="index === activeSuggestion"
+            @mousedown.prevent="pickSuggestion(item)"
+          >
+            {{ item.label }}
+          </li>
+          <li class="glsw-muted glsw-suggestions-hint" aria-hidden="true">Tab to complete</li>
+        </ul>
+
+        <p v-for="error in compiledQuery.errors" :key="error.term" class="glsw-sub glsw-danger-text">
+          Ignoring <span class="glsw-mono">{{ error.term }}</span>: {{ error.message }}
+        </p>
+      </div>
+
+      <div v-for="section in listedSections" :key="section.key" class="glsw-section">
         <div class="glsw-section-head">
           <span class="glsw-section-title">{{ section.label }}</span>
           <span v-if="section.report.scanners.length" class="glsw-muted">
@@ -476,9 +636,13 @@ const isCollapsible = computed(
           No findings{{ section.hiddenByFilter ? ' above your filters' : '' }}.
         </p>
 
+        <p v-else-if="!section.listed.length" class="glsw-sub glsw-muted">
+          No findings match the search.
+        </p>
+
         <ul v-else class="glsw-findings">
           <FindingItem
-            v-for="finding in section.findings.slice(0, shownCount(section.key))"
+            v-for="finding in section.listed.slice(0, shownCount(section.key))"
             :key="finding.key"
             :finding="finding"
             :status="statusOf(finding)"
@@ -487,17 +651,17 @@ const isCollapsible = computed(
         </ul>
 
         <button
-          v-if="section.findings.length > shownCount(section.key)"
+          v-if="section.listed.length > shownCount(section.key)"
           type="button"
           class="glsw-more"
           @click="showMore(section.key)"
         >
-          Show {{ Math.min(pageSize, section.findings.length - shownCount(section.key)) }} more of
-          {{ section.findings.length }}
+          Show {{ Math.min(pageSize, section.listed.length - shownCount(section.key)) }} more of
+          {{ section.listed.length }}
         </button>
       </div>
 
-      <div v-if="fixedFindings.length" class="glsw-section">
+      <div v-if="listedFixed.length" class="glsw-section">
         <div class="glsw-section-head">
           <span class="glsw-section-title">Fixed by this merge request</span>
           <span class="glsw-muted">
@@ -507,7 +671,7 @@ const isCollapsible = computed(
 
         <ul class="glsw-findings">
           <FindingItem
-            v-for="finding in fixedFindings.slice(0, shownCount(FIXED_KEY))"
+            v-for="finding in listedFixed.slice(0, shownCount(FIXED_KEY))"
             :key="finding.key"
             :finding="finding"
             status="fixed"
@@ -516,13 +680,13 @@ const isCollapsible = computed(
         </ul>
 
         <button
-          v-if="fixedFindings.length > shownCount(FIXED_KEY)"
+          v-if="listedFixed.length > shownCount(FIXED_KEY)"
           type="button"
           class="glsw-more"
           @click="showMore(FIXED_KEY)"
         >
-          Show {{ Math.min(pageSize, fixedFindings.length - shownCount(FIXED_KEY)) }} more of
-          {{ fixedFindings.length }}
+          Show {{ Math.min(pageSize, listedFixed.length - shownCount(FIXED_KEY)) }} more of
+          {{ listedFixed.length }}
         </button>
       </div>
     </div>

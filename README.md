@@ -85,6 +85,34 @@ does, so both appear, told apart by the analyzer name and job link in the sectio
 Findings can be filtered by severity, scanner-flagged likely false positives hidden, and the number
 of findings each section lists before "show more" changed, from the options page.
 
+### Searching findings
+
+A search box above the findings narrows the list for as long as the page is open. It is not stored,
+and it only filters the list: the header's summary, colour and counts keep describing every finding,
+so a search cannot make a merge request look clean.
+
+```
+severity:>=high file:!*.test.ts -scanner:semgrep is:new xss
+```
+
+| Term | Matches |
+| --- | --- |
+| `xss`, `"sql injection"` | name, location, identifiers, scanner or dependency containing the text |
+| `severity:high`, `sev:>=high`, `sev:<medium` | a severity, or a range of them (`>=high` is high or worse) |
+| `type:sast`, `type:dependency` | report type |
+| `file:*.ts`, `file:src/` (alias `path:`) | file, URL path or location label |
+| `id:CWE-79`, `id:CVE-2024-*` | identifiers |
+| `scanner:semgrep`, `dep:lodash`, `name:secret` | scanner, dependency/package/image, finding name |
+| `is:new`, `is:existing`, `is:uncomparable`, `is:fixed`, `is:fp` | comparison status, or flagged as a likely false positive |
+
+Every term has to match. Repeating a key or giving it a comma list (`sev:high,critical`) matches any
+of the values. Prefix a term with `-` or its value with `!` to exclude it. Values with `*` or `?` are
+globs over the whole field (`*` crosses `/`); anything else matches as a substring, ignoring case.
+Terms it cannot use are named under the box and skipped. Keys, and the values of `severity`, `type`
+and `is`, are suggested as you type: arrow keys pick one, Tab or Enter completes it, and Esc closes the
+suggestions or, once they are closed, clears the search. The search box can be hidden from the options
+page.
+
 ### New vs. existing findings
 
 The headline is about what the merge request *adds*: `This merge request adds 2 potential
