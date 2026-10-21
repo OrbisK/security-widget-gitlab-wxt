@@ -27,6 +27,12 @@ export default defineConfig({
       gecko: {
         id: 'security-widget-for-gitlab@local',
         strict_min_version: '128.0',
+        // Required by AMO for new submissions. Everything is fetched from the
+        // user's own GitLab instance and kept in local storage; nothing is
+        // transmitted to us or any third party.
+        data_collection_permissions: {
+          required: ['none'],
+        },
       },
     },
   },
