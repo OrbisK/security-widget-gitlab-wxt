@@ -65,9 +65,9 @@ jobs:
   # `release` lands here as a `workflow_dispatch` on the `vX.Y.Z` tag; manual
   # recovery uses the same path (Run workflow -> pick a `v*` tag).
   #
-  # Store submission is deliberately not wired up yet: neither listing exists, so
-  # for now this only attaches the zips to the release. To turn it on, add the
-  # store secrets and the `wxt submit` steps back — see "Releasing" in
+  # Builds the zips, attaches them to the release, then submits to the stores.
+  # Only Firefox is submitted for now; the Chrome step is commented out until
+  # the Chrome Web Store listing exists — see "Store submission" in
   # CONTRIBUTING.md.
   assets:
     if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/v')
@@ -79,6 +79,15 @@ jobs:
       contents: write # attach the zips to the release
     env:
       TAG: ${{ github.ref_name }}
+      # Read into the job env so the submit steps can be gated on them —
+      # `secrets` is not available in a step's `if`.
+      FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+      FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+      FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+      # CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+      # CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+      # CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+      # CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -103,8 +112,7 @@ jobs:
       - name: Unit test
         run: pnpm test
 
-      # `zip:firefox` also emits the sources zip AMO will want for review once
-      # submission is wired up; harmless to keep producing it in the meantime.
+      # `zip:firefox` also emits the sources zip AMO wants for review.
       - name: Build and zip
         run: |
           pnpm zip
@@ -131,11 +139,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      # Submission runs after the release upload, so a rejected submission still
+      # leaves installable zips behind. Each store is skipped while its secrets
+      # are missing.
+      - name: Submit to Firefox Add-ons
+        id: submit-firefox
+        if: env.FIREFOX_JWT_ISSUER != ''
+        run: |
+          pnpm exec wxt submit \
+            --firefox-zip .output/*-firefox.zip \
+            --firefox-sources-zip .output/*-sources.zip
+
+      # - name: Submit to Chrome Web Store
+      #   id: submit-chrome
+      #   if: env.CHROME_CLIENT_ID != ''
+      #   run: pnpm exec wxt submit --chrome-zip .output/*-chrome.zip
+
       - name: Summarise
+        if: always()
+        env:
+          FIREFOX_OUTCOME: ${{ steps.submit-firefox.outcome }}
         run: |
           {
             echo "### ${TAG}"
             echo ""
             echo "Zips attached to [the release](${{ github.server_url }}/${{ github.repository }}/releases/tag/${TAG})."
-            echo "Store submission is not wired up yet."
+            echo ""
+            echo "| Store | Submission |"
+            echo "| --- | --- |"
+            echo "| Firefox Add-ons | ${FIREFOX_OUTCOME:-not run} |"
+            echo "| Chrome Web Store | disabled |"
           } >> "$GITHUB_STEP_SUMMARY"
