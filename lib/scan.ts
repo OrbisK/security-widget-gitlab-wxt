@@ -88,18 +88,28 @@ function describe(error: unknown): string {
 /**
  * Turns a failed artifact download into something worth reading.
  *
- * A 404 here is nearly always an expired artifact: we only ask for URLs the
- * jobs API just listed, and GitLab erases the file while the job itself stays.
- * The list can also simply be stale — artifacts erased between the listing and
- * the download, or unlocked by a newer pipeline mid-session — so the wording is
+ * A 404 here is usually an expired artifact: we only ask for URLs the jobs API
+ * just listed, and GitLab erases the file while the job itself stays. The list
+ * can also simply be stale — artifacts erased between the listing and the
+ * download, or unlocked by a newer pipeline mid-session — so the wording is
  * hedged unless `artifacts_expire_at` is a date that has actually passed.
  *
- * Other 404 causes exist (a job in a fork the user cannot read, say), which is
- * the other reason not to state expiry as fact without a date to back it.
+ * A 404 for an artifact whose expiry is still ahead is not expiry, though.
+ * GitLab answers 404 rather than 403 when the user may see the job but not its
+ * artifacts (`artifacts:access`, or a public project restricting artifacts to
+ * members), so that case is reported as unavailable rather than waved off.
  */
 export function describeDownloadFailure(error: unknown, source: ReportSource, now: Date): ReportError {
   if (!(error instanceof HttpError) || error.status !== 404) {
     return { kind: 'unavailable', message: describe(error) };
+  }
+
+  if (futureExpiry(source.artifactsExpireAt, now)) {
+    return {
+      kind: 'unavailable',
+      message:
+        'The report artifact has not expired but could not be downloaded — your account may not have access to job artifacts in this project.',
+    };
   }
 
   const expiredOn = pastExpiry(source.artifactsExpireAt, now);
@@ -109,6 +119,13 @@ export function describeDownloadFailure(error: unknown, source: ReportSource, no
       ? `The report artifact expired on ${expiredOn} and is no longer stored.`
       : 'The report artifact is no longer available — it has most likely expired.',
   };
+}
+
+/** True only if `artifacts_expire_at` parses and is still in the future. */
+function futureExpiry(value: string | undefined, now: Date): boolean {
+  if (!value) return false;
+  const at = new Date(value);
+  return !Number.isNaN(at.getTime()) && at.getTime() > now.getTime();
 }
 
 /** Formats `artifacts_expire_at` only if it parses and is in the past. */

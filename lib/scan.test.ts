@@ -42,17 +42,18 @@ describe('describeDownloadFailure', () => {
     });
   });
 
-  // A future expiry means the file should still be there, so a 404 is not
-  // explained by expiry and must not be reported as a fact.
-  it('hedges when the expiry date has not passed yet', () => {
+  // A future expiry means the file should still be there, so the 404 is
+  // something else — typically artifacts restricted to project members.
+  it('reports a 404 before the expiry date as unavailable, not expired', () => {
     const error = describeDownloadFailure(
       fail(404),
       source({ artifactsExpireAt: '2026-12-01T00:00:00Z' }),
       NOW,
     );
 
-    expect(error.kind).toBe('expired');
-    expect(error.message).not.toMatch(/expired on/);
+    expect(error.kind).toBe('unavailable');
+    expect(error.message).toMatch(/has not expired/);
+    expect(error.message).toMatch(/access/);
   });
 
   it('hedges when the expiry timestamp is unparseable', () => {
