@@ -189,6 +189,29 @@ export interface Comparison {
    */
   baseReportCount: number;
   baseUnreadableCount: number;
+  /**
+   * Base jobs whose findings were held back from `fixed` because this merge
+   * request's run of the same job has not finished: a report not uploaded yet
+   * is no evidence that anything was fixed.
+   */
+  pendingJobs: string[];
+}
+
+/**
+ * How far a pipeline has got, as far as its reports are concerned. Jobs that
+ * have not finished have not uploaded a report yet, so the absence of their
+ * findings says nothing about whether those findings are gone.
+ */
+export interface PipelineProgress {
+  /** Jobs that have not finished, including manual ones nobody has started. */
+  unfinishedJobs: string[];
+  /** Every job listed, finished or not. */
+  jobNames: string[];
+  /**
+   * A trigger job has yet to create its downstream pipeline, so that
+   * pipeline's jobs are not listed at all — finished or not.
+   */
+  awaitingDownstream: boolean;
 }
 
 /**
@@ -208,6 +231,7 @@ export interface ScanResult {
   counts: SeverityCounts;
   pipelineId: number;
   pipelineWebUrl?: string;
+  progress: PipelineProgress;
   comparison: ComparisonState;
 }
 

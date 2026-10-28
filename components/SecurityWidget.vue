@@ -578,6 +578,11 @@ const isCollapsible = computed(
             <template v-if="fixedFindings.length > 0">
               · {{ fixedFindings.length }} fixed here
             </template>
+            <!-- Their reports are not in yet, so nothing they found can be called fixed. -->
+            <template v-if="comparison.pendingJobs.length > 0">
+              · fixes not checked for {{ comparison.pendingJobs.join(', ') }} until
+              {{ comparison.pendingJobs.length === 1 ? 'it finishes' : 'they finish' }}
+            </template>
             <!-- Naming the types says which scanner the base was missing. -->
             <template v-if="uncomparableVisible > 0">
               · {{ uncomparableVisible }} not compared ({{ uncomparableLabels.join(', ') }})
