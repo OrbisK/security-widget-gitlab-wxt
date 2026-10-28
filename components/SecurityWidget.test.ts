@@ -48,6 +48,7 @@ async function render(
   const findings = head.flatMap((report) => report.findings);
   const progress = options.progress ?? {
     unfinishedJobs: [],
+    manualJobs: [],
     jobNames: ['semgrep-sast'],
     awaitingDownstream: false,
   };
@@ -171,7 +172,7 @@ describe('SecurityWidget header', () => {
 
   it('does not call an empty list clean while scan jobs are still running', async () => {
     const html = await render([report([])], {
-      progress: { unfinishedJobs: ['iac-sast'], jobNames: ['semgrep-sast', 'iac-sast'], awaitingDownstream: false },
+      progress: { unfinishedJobs: ['iac-sast'], manualJobs: [], jobNames: ['semgrep-sast', 'iac-sast'], awaitingDownstream: false },
     });
 
     expect(html).not.toContain('glsw-tone-success');
@@ -188,11 +189,54 @@ describe('SecurityWidget header', () => {
   it('says which jobs are not checked for fixes while they still run', async () => {
     const html = await render([report([sqlInjection])], {
       base: [report([sqlInjection, hardcodedSecret])],
-      progress: { unfinishedJobs: ['semgrep-sast'], jobNames: ['semgrep-sast'], awaitingDownstream: false },
+      progress: { unfinishedJobs: ['semgrep-sast'], manualJobs: [], jobNames: ['semgrep-sast'], awaitingDownstream: false },
     });
 
     expect(html).not.toContain('Fixed by this merge request');
     expect(html).toContain('fixes not checked for semgrep-sast until it finishes');
+    expect(html).toMatch(/semgrep-sast still running,/);
+  });
+
+  it('is not still running once every scan has finished, whatever else is', async () => {
+    // A deploy still running and a manual job nobody started are not scans.
+    const html = await render([report([sqlInjection])], {
+      base: [report([sqlInjection])],
+      progress: {
+        unfinishedJobs: ['deploy', 'review-app'],
+        manualJobs: ['review-app'],
+        jobNames: ['semgrep-sast', 'deploy', 'review-app'],
+        awaitingDownstream: false,
+      },
+    });
+
+    expect(html).not.toContain('still running');
+  });
+
+  it('says the pipeline is running when it cannot tell which jobs are scans', async () => {
+    const html = await render([report([sqlInjection])], {
+      progress: {
+        unfinishedJobs: ['deploy'],
+        manualJobs: [],
+        jobNames: ['semgrep-sast', 'deploy'],
+        awaitingDownstream: false,
+      },
+    });
+
+    expect(html).toMatch(/pipeline still running,/);
+  });
+
+  it('is not running when only manual jobs are left', async () => {
+    const html = await render([report([])], {
+      progress: {
+        unfinishedJobs: ['review-app'],
+        manualJobs: ['review-app'],
+        jobNames: ['semgrep-sast', 'review-app'],
+        awaitingDownstream: false,
+      },
+    });
+
+    expect(html).toContain('glsw-tone-success');
+    expect(html).not.toContain('still running');
   });
 
   it('hides pre-existing findings on request, but never uncomparable ones', async () => {

@@ -234,6 +234,7 @@ describe('compareReports', () => {
     it('does not claim findings of an unfinished job are fixed', () => {
       const result = compareReports(head, base, {
         unfinishedJobs: ['iac-sast'],
+        manualJobs: [],
         jobNames: ['semgrep-sast', 'iac-sast'],
         awaitingDownstream: false,
       });
@@ -245,6 +246,7 @@ describe('compareReports', () => {
     it('holds back jobs that may be in a downstream pipeline not created yet', () => {
       const result = compareReports(head, base, {
         unfinishedJobs: [],
+        manualJobs: [],
         jobNames: ['semgrep-sast', 'trigger-child'],
         awaitingDownstream: true,
       });
@@ -258,6 +260,7 @@ describe('compareReports', () => {
       // with nothing still running, its findings really are absent.
       const result = compareReports(head, base, {
         unfinishedJobs: [],
+        manualJobs: [],
         jobNames: ['semgrep-sast'],
         awaitingDownstream: false,
       });

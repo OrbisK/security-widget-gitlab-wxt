@@ -77,6 +77,7 @@ interface Job {
 }
 
 interface Bridge {
+  name?: string;
   status?: string;
   downstream_pipeline?: { id: number; project_id: number } | null;
 }
@@ -365,6 +366,10 @@ function isUnfinished(status: string | undefined): boolean {
   return UNFINISHED_JOB_STATUSES.includes(status ?? '');
 }
 
+function emptyProgress(): PipelineProgress {
+  return { unfinishedJobs: [], manualJobs: [], jobNames: [], awaitingDownstream: false };
+}
+
 export interface DiscoveredSources {
   sources: ReportSource[];
   progress: PipelineProgress;
@@ -396,11 +401,12 @@ export async function discoverReportSources(
     `pipeline ${pipelineId}: ${deduped.length} security report artifact(s)`,
     deduped.map((source) => `${source.reportType} (job ${source.jobName}#${source.jobId})`),
   );
-  if (progress.unfinishedJobs.length > 0 || progress.awaitingDownstream) {
+  if (progress.unfinishedJobs.length > 0) {
     log(
-      `pipeline ${pipelineId} is still running:`,
+      `pipeline ${pipelineId} has unfinished jobs:`,
       progress.unfinishedJobs,
-      progress.awaitingDownstream ? '(and a downstream pipeline is yet to start)' : '',
+      progress.manualJobs.length ? `(waiting to be started: ${progress.manualJobs.join(', ')})` : '',
+      progress.awaitingDownstream ? '(and a downstream pipeline is yet to be created)' : '',
     );
   }
 
@@ -447,6 +453,7 @@ async function collectFromPipeline(
   const sources: ReportSource[] = [];
   const progress: PipelineProgress = {
     unfinishedJobs: jobs.filter((job) => isUnfinished(job.status)).map((job) => job.name),
+    manualJobs: jobs.filter((job) => job.status === 'manual').map((job) => job.name),
     jobNames: jobs.map((job) => job.name),
     awaitingDownstream: false,
   };
@@ -474,6 +481,13 @@ async function collectFromPipeline(
     progress.awaitingDownstream = bridges.some(
       (bridge) => !bridge.downstream_pipeline && isUnfinished(bridge.status),
     );
+    // Listed with the jobs, so a manual trigger counts as waiting on someone
+    // rather than as running, just as a manual job does.
+    for (const bridge of bridges) {
+      if (!bridge.name || !isUnfinished(bridge.status)) continue;
+      progress.unfinishedJobs.push(bridge.name);
+      if (bridge.status === 'manual') progress.manualJobs.push(bridge.name);
+    }
 
     const children = bridges
       .map((bridge) => bridge.downstream_pipeline)
@@ -482,16 +496,14 @@ async function collectFromPipeline(
     const nested = await Promise.all(
       children.map((child) =>
         collectFromPipeline(apiBase, child.project_id, child.id, depthRemaining - 1).catch(
-          (): DiscoveredSources => ({
-            sources: [],
-            progress: { unfinishedJobs: [], jobNames: [], awaitingDownstream: false },
-          }),
+          (): DiscoveredSources => ({ sources: [], progress: emptyProgress() }),
         ),
       ),
     );
     for (const child of nested) {
       sources.push(...child.sources);
       progress.unfinishedJobs.push(...child.progress.unfinishedJobs);
+      progress.manualJobs.push(...child.progress.manualJobs);
       progress.jobNames.push(...child.progress.jobNames);
       progress.awaitingDownstream ||= child.progress.awaitingDownstream;
     }
