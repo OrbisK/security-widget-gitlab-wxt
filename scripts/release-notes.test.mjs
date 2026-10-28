@@ -4,7 +4,7 @@ import { toReleaseNotes } from './release-notes.mjs';
 const RELEASE_URL = 'https://github.com/OrbisK/security-widget-gitlab-wxt/releases/tag/v0.2.5';
 
 describe('toReleaseNotes', () => {
-  it('keeps only the changelog sections of an uppt release body, as plain text', () => {
+  it('keeps only the changelog sections of an uppt release body, as AMO Markdown', () => {
     const body = [
       '> v0.2.5 is the next patch release.',
       '>',
@@ -26,12 +26,12 @@ describe('toReleaseNotes', () => {
 
     expect(toReleaseNotes(body, RELEASE_URL)).toBe(
       [
-        '🩹 Fixes',
+        '**🩹 Fixes**',
         '',
         '- set data_collection_permissions (#16)',
-        '- link the options page',
+        '- link the [options page](https://example.com/options)',
         '',
-        `Full release notes: ${RELEASE_URL}`,
+        `[Full release notes](${RELEASE_URL})`,
       ].join('\n'),
     );
   });
@@ -47,7 +47,7 @@ describe('toReleaseNotes', () => {
 
     expect(toReleaseNotes(body)).toBe(
       [
-        "What's Changed",
+        "**What's Changed**",
         '- fix: something by @OrbisK in https://github.com/OrbisK/security-widget-gitlab-wxt/pull/20',
       ].join('\n'),
     );

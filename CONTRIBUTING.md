@@ -136,9 +136,9 @@ Each Firefox version gets release notes. `wxt submit` has no option for them, so
 `patches/publish-browser-extension@4.0.5.patch` (applied by pnpm through `pnpm-workspace.yaml`) adds
 a `FIREFOX_RELEASE_NOTES` env var, which sets the new version's notes once it is created.
 `scripts/release-notes.mjs` builds them from the GitHub release body, keeping only the changelog
-sections and stripping the Markdown, because AMO shows release notes as plain text. When `wxt` bumps
-`publish-browser-extension`, the patch has to be ported with `pnpm patch` or pnpm will fail to
-install.
+sections and rewriting headings and inline code, which AMO's limited Markdown does not render. When
+`wxt` bumps `publish-browser-extension`, the patch has to be ported with `pnpm patch` or pnpm will
+fail to install.
 
 To enable Chrome, add its secrets and uncomment the `CHROME_*` env entries and the
 `Submit to Chrome Web Store` step.

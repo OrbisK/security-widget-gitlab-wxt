@@ -145,7 +145,7 @@ jobs:
       #
       # FIREFOX_RELEASE_NOTES is not a stock `wxt submit` option; it comes from
       # our patch to publish-browser-extension (patches/). The notes are the
-      # release body uppt wrote, reduced to plain text for AMO.
+      # release body uppt wrote, reduced to the Markdown AMO renders.
       - name: Submit to Firefox Add-ons
         id: submit-firefox
         if: env.FIREFOX_JWT_ISSUER != ''
