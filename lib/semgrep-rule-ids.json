@@ -1,5 +1,5 @@
 {
-  "source": "gitlab-org/security-products/sast-rules@705c08384535914ac5312f4f0f71758241a16e14",
+  "source": "gitlab-org/security-products/sast-rules v2.10.1",
   "ruleIds": {
     "bandit.B611": [
       "bandit.B611-1",
@@ -31,9 +31,6 @@
     "find_sec_bugs.CIPHER_INTEGRITY-1": [
       "find_sec_bugs.CIPHER_INTEGRITY-1",
       "find_sec_bugs_kotlin.CIPHER_INTEGRITY-1"
-    ],
-    "find_sec_bugs.COMMAND_INJECTION": [
-      "find_sec_bugs_scala.COMMAND_INJECTION-1"
     ],
     "find_sec_bugs.COMMAND_INJECTION-1": [
       "find_sec_bugs.COMMAND_INJECTION-1",
@@ -81,24 +78,10 @@
       "find_sec_bugs.DES_USAGE-1",
       "find_sec_bugs_kotlin.DES_USAGE-1"
     ],
-    "find_sec_bugs.DMI_CONSTANT_DB_PASSWORD": [
-      "find_sec_bugs_scala.DMI_CONSTANT_DB_PASSWORD-1"
-    ],
-    "find_sec_bugs.DMI_CONSTANT_DB_PASSWORD-1": [
-      "find_sec_bugs.DMI_CONSTANT_DB_PASSWORD-1",
-      "find_sec_bugs_kotlin.DMI_CONSTANT_DB_PASSWORD-1"
-    ],
     "find_sec_bugs.DMI_CONSTANT_DB_PASSWORD-1.HARD_CODE_PASSWORD-3": [
       "find_sec_bugs.DMI_CONSTANT_DB_PASSWORD-1.HARD_CODE_PASSWORD-3",
       "find_sec_bugs_kotlin.DMI_CONSTANT_DB_PASSWORD-1.HARD_CODE_PASSWORD-3",
       "find_sec_bugs_scala.DMI_CONSTANT_DB_PASSWORD-1.HARD_CODE_PASSWORD-3"
-    ],
-    "find_sec_bugs.DMI_EMPTY_DB_PASSWORD": [
-      "find_sec_bugs_scala.DMI_EMPTY_DB_PASSWORD-1"
-    ],
-    "find_sec_bugs.DMI_EMPTY_DB_PASSWORD-1": [
-      "find_sec_bugs.DMI_EMPTY_DB_PASSWORD-1",
-      "find_sec_bugs_kotlin.DMI_EMPTY_DB_PASSWORD-1"
     ],
     "find_sec_bugs.DMI_EMPTY_DB_PASSWORD-1.HARD_CODE_PASSWORD-2": [
       "find_sec_bugs.DMI_EMPTY_DB_PASSWORD-1.HARD_CODE_PASSWORD-2",
@@ -279,9 +262,6 @@
       "find_sec_bugs.PADDING_ORACLE-1",
       "find_sec_bugs_kotlin.PADDING_ORACLE-1"
     ],
-    "find_sec_bugs.PATH_TRAVERSAL_IN": [
-      "find_sec_bugs_scala.PATH_TRAVERSAL_IN-1"
-    ],
     "find_sec_bugs.PATH_TRAVERSAL_IN-1.SCALA_PATH_TRAVERSAL_IN-1": [
       "find_sec_bugs_scala.PATH_TRAVERSAL_IN-1.SCALA_PATH_TRAVERSAL_IN-1"
     ],
@@ -305,13 +285,6 @@
     ],
     "find_sec_bugs.PT_RELATIVE_PATH_TRAVERSAL": [
       "find_sec_bugs_scala.PT_RELATIVE_PATH_TRAVERSAL-1"
-    ],
-    "find_sec_bugs.REQUESTDISPATCHER_FILE_DISCLOSURE": [
-      "find_sec_bugs_scala.REQUESTDISPATCHER_FILE_DISCLOSURE-1"
-    ],
-    "find_sec_bugs.REQUESTDISPATCHER_FILE_DISCLOSURE-1": [
-      "find_sec_bugs.REQUESTDISPATCHER_FILE_DISCLOSURE-1",
-      "find_sec_bugs_kotlin.REQUESTDISPATCHER_FILE_DISCLOSURE-1"
     ],
     "find_sec_bugs.REQUESTDISPATCHER_FILE_DISCLOSURE-1.STRUTS_FILE_DISCLOSURE-1.SPRING_FILE_DISCLOSURE-1": [
       "find_sec_bugs_kotlin.REQUESTDISPATCHER_FILE_DISCLOSURE-1.STRUTS_FILE_DISCLOSURE-1.SPRING_FILE_DISCLOSURE-1",
@@ -350,13 +323,6 @@
     "find_sec_bugs.SCALA_XSS_MVC_API": [
       "find_sec_bugs_scala.SCALA_XSS_MVC_API-1"
     ],
-    "find_sec_bugs.SCRIPT_ENGINE_INJECTION": [
-      "find_sec_bugs_scala.SCRIPT_ENGINE_INJECTION-1"
-    ],
-    "find_sec_bugs.SCRIPT_ENGINE_INJECTION-1": [
-      "find_sec_bugs.SCRIPT_ENGINE_INJECTION-1",
-      "find_sec_bugs_kotlin.SCRIPT_ENGINE_INJECTION-1"
-    ],
     "find_sec_bugs.SCRIPT_ENGINE_INJECTION-1.SPEL_INJECTION-1.EL_INJECTION-2.SEAM_LOG_INJECTION-1": [
       "find_sec_bugs.SCRIPT_ENGINE_INJECTION-1.SPEL_INJECTION-1.EL_INJECTION-2.SEAM_LOG_INJECTION-1",
       "find_sec_bugs_kotlin.SCRIPT_ENGINE_INJECTION-1.SPEL_INJECTION-1.EL_INJECTION-2.SEAM_LOG_INJECTION-1",
@@ -373,60 +339,14 @@
       "find_sec_bugs.SMTP_HEADER_INJECTION-1",
       "find_sec_bugs_kotlin.SMTP_HEADER_INJECTION-1"
     ],
-    "find_sec_bugs.SPEL_INJECTION": [
-      "find_sec_bugs_scala.SPEL_INJECTION-1"
-    ],
-    "find_sec_bugs.SPEL_INJECTION-1": [
-      "find_sec_bugs.SPEL_INJECTION-1",
-      "find_sec_bugs_kotlin.SPEL_INJECTION-1"
-    ],
     "find_sec_bugs.SPRING_CSRF_PROTECTION_DISABLED-1": [
       "find_sec_bugs_kotlin.SPRING_CSRF_PROTECTION_DISABLED-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_HIBERNATE-1": [
-      "find_sec_bugs_kotlin.SQL_INJECTION_HIBERNATE-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_JDBC": [
-      "find_sec_bugs_scala.SQL_INJECTION_JDBC-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_JDBC-1": [
-      "find_sec_bugs_kotlin.SQL_INJECTION_JDBC-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_JDO": [
-      "find_sec_bugs_scala.SQL_INJECTION_JDO-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_JDO-1": [
-      "find_sec_bugs_kotlin.SQL_INJECTION_JDO-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_JPA": [
-      "find_sec_bugs_scala.SQL_INJECTION_JPA-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_JPA-1": [
-      "find_sec_bugs_kotlin.SQL_INJECTION_JPA-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_SPRING_JDBC": [
-      "find_sec_bugs_scala.SQL_INJECTION_SPRING_JDBC-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_SPRING_JDBC-1": [
-      "find_sec_bugs_kotlin.SQL_INJECTION_SPRING_JDBC-1"
     ],
     "find_sec_bugs.SQL_INJECTION_SPRING_JDBC-1.SQL_INJECTION_JPA-1.SQL_INJECTION_JDO-1.SQL_INJECTION_JDBC-1.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1.SCALA_SQL_INJECTION_SLICK-1": [
       "find_sec_bugs_scala.SQL_INJECTION_SPRING_JDBC-1.SQL_INJECTION_JPA-1.SQL_INJECTION_JDO-1.SQL_INJECTION_JDBC-1.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1.SCALA_SQL_INJECTION_SLICK-1"
     ],
     "find_sec_bugs.SQL_INJECTION_SPRING_JDBC-1.SQL_INJECTION_JPA-1.SQL_INJECTION_JDO-1.SQL_INJECTION_JDBC-1.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1.SQL_INJECTION-1.SQL_INJECTION_HIBERNATE-1.SQL_INJECTION_VERTX-1.SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING-1": [
       "find_sec_bugs_kotlin.SQL_INJECTION_SPRING_JDBC-1.SQL_INJECTION_JPA-1.SQL_INJECTION_JDO-1.SQL_INJECTION_JDBC-1.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1.SQL_INJECTION-1.SQL_INJECTION_HIBERNATE-1.SQL_INJECTION_VERTX-1.SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION_VERTX-1": [
-      "find_sec_bugs_kotlin.SQL_INJECTION_VERTX-1"
-    ],
-    "find_sec_bugs.SQL_INJECTION-1": [
-      "find_sec_bugs_kotlin.SQL_INJECTION-1"
-    ],
-    "find_sec_bugs.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE": [
-      "find_sec_bugs_scala.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1"
-    ],
-    "find_sec_bugs.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1": [
-      "find_sec_bugs_kotlin.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1"
     ],
     "find_sec_bugs.SSL_CONTEXT": [
       "find_sec_bugs_scala.SSL_CONTEXT-1"
@@ -439,12 +359,6 @@
       "find_sec_bugs.SSL_CONTEXT-2",
       "find_sec_bugs_kotlin.SSL_CONTEXT-2"
     ],
-    "find_sec_bugs.STRUTS_FILE_DISCLOSURE": [
-      "find_sec_bugs_scala.STRUTS_FILE_DISCLOSURE-1"
-    ],
-    "find_sec_bugs.STRUTS_FILE_DISCLOSURE-1": [
-      "find_sec_bugs_kotlin.STRUTS_FILE_DISCLOSURE-1"
-    ],
     "find_sec_bugs.STRUTS_FORM_VALIDATION": [
       "find_sec_bugs_scala.STRUTS_FORM_VALIDATION-1"
     ],
@@ -455,20 +369,6 @@
       "find_sec_bugs.TDES_USAGE-1",
       "find_sec_bugs_kotlin.TDES_USAGE-1"
     ],
-    "find_sec_bugs.TEMPLATE_INJECTION_FREEMARKER": [
-      "find_sec_bugs_scala.TEMPLATE_INJECTION_FREEMARKER-1"
-    ],
-    "find_sec_bugs.TEMPLATE_INJECTION_FREEMARKER-1": [
-      "find_sec_bugs.TEMPLATE_INJECTION_FREEMARKER-1",
-      "find_sec_bugs_kotlin.TEMPLATE_INJECTION_FREEMARKER-1"
-    ],
-    "find_sec_bugs.TEMPLATE_INJECTION_PEBBLE": [
-      "find_sec_bugs_scala.TEMPLATE_INJECTION_PEBBLE-1"
-    ],
-    "find_sec_bugs.TEMPLATE_INJECTION_PEBBLE-1": [
-      "find_sec_bugs.TEMPLATE_INJECTION_PEBBLE-1",
-      "find_sec_bugs_kotlin.TEMPLATE_INJECTION_PEBBLE-1"
-    ],
     "find_sec_bugs.TEMPLATE_INJECTION_PEBBLE-1.TEMPLATE_INJECTION_FREEMARKER-1.TEMPLATE_INJECTION_VELOCITY-1": [
       "find_sec_bugs.TEMPLATE_INJECTION_PEBBLE-1.TEMPLATE_INJECTION_FREEMARKER-1.TEMPLATE_INJECTION_VELOCITY-1",
       "find_sec_bugs_kotlin.TEMPLATE_INJECTION_PEBBLE-1.TEMPLATE_INJECTION_FREEMARKER-1.TEMPLATE_INJECTION_VELOCITY-1",
@@ -477,18 +377,8 @@
     "find_sec_bugs.TRUST_BOUNDARY_VIOLATION": [
       "find_sec_bugs_scala.TRUST_BOUNDARY_VIOLATION-1"
     ],
-    "find_sec_bugs.UNENCRYPTED_SOCKET": [
-      "find_sec_bugs_scala.UNENCRYPTED_SOCKET-1"
-    ],
     "find_sec_bugs.UNENCRYPTED_SOCKET-1.UNENCRYPTED_SERVER_SOCKET-1": [
       "find_sec_bugs_scala.UNENCRYPTED_SOCKET-1.UNENCRYPTED_SERVER_SOCKET-1"
-    ],
-    "find_sec_bugs.UNVALIDATED_REDIRECT": [
-      "find_sec_bugs_scala.UNVALIDATED_REDIRECT-1"
-    ],
-    "find_sec_bugs.UNVALIDATED_REDIRECT-1": [
-      "find_sec_bugs.UNVALIDATED_REDIRECT-1",
-      "find_sec_bugs_kotlin.UNVALIDATED_REDIRECT-1"
     ],
     "find_sec_bugs.UNVALIDATED_REDIRECT-1.URL_REWRITING-1": [
       "find_sec_bugs.UNVALIDATED_REDIRECT-1.URL_REWRITING-1",
@@ -509,23 +399,9 @@
       "find_sec_bugs.WEAK_FILENAMEUTILS-1",
       "find_sec_bugs_kotlin.WEAK_FILENAMEUTILS-1"
     ],
-    "find_sec_bugs.WEAK_HOSTNAME_VERIFIER": [
-      "find_sec_bugs.WEAK_HOSTNAME_VERIFIER",
-      "find_sec_bugs_scala.WEAK_HOSTNAME_VERIFIER-1"
-    ],
-    "find_sec_bugs.WEAK_HOSTNAME_VERIFIER-1": [
-      "find_sec_bugs_kotlin.WEAK_HOSTNAME_VERIFIER-1"
-    ],
     "find_sec_bugs.WEAK_HOSTNAME_VERIFIER-1.WEAK_TRUST_MANAGER-1": [
       "find_sec_bugs_kotlin.WEAK_HOSTNAME_VERIFIER-1.WEAK_TRUST_MANAGER-1",
       "find_sec_bugs_scala.WEAK_HOSTNAME_VERIFIER-1.WEAK_TRUST_MANAGER-1"
-    ],
-    "find_sec_bugs.WEAK_MESSAGE_DIGEST_MD5": [
-      "find_sec_bugs_scala.WEAK_MESSAGE_DIGEST_MD5-1"
-    ],
-    "find_sec_bugs.WEAK_MESSAGE_DIGEST_MD5-1": [
-      "find_sec_bugs.WEAK_MESSAGE_DIGEST_MD5-1",
-      "find_sec_bugs_kotlin.WEAK_MESSAGE_DIGEST_MD5-1"
     ],
     "find_sec_bugs.WEAK_MESSAGE_DIGEST_MD5-1.WEAK_MESSAGE_DIGEST_SHA1-1": [
       "find_sec_bugs.WEAK_MESSAGE_DIGEST_MD5-1.WEAK_MESSAGE_DIGEST_SHA1-1",
@@ -567,9 +443,6 @@
     ],
     "find_sec_bugs.XXE_DOCUMENT": [
       "find_sec_bugs_scala.XXE_DOCUMENT-1"
-    ],
-    "find_sec_bugs.XXE_DTD_TRANSFORM_FACTORY": [
-      "find_sec_bugs_scala.XXE_DTD_TRANSFORM_FACTORY-1"
     ],
     "find_sec_bugs.XXE_DTD_TRANSFORM_FACTORY-1.XXE_XSLT_TRANSFORM_FACTORY-1": [
       "find_sec_bugs_scala.XXE_DTD_TRANSFORM_FACTORY-1.XXE_XSLT_TRANSFORM_FACTORY-1"
