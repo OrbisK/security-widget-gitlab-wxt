@@ -221,6 +221,52 @@ describe('compareReports', () => {
     expect(compareReports(head, base).fixed).toEqual([]);
   });
 
+  describe('while the head pipeline is still running', () => {
+    const iacFinding = { name: 'Insecure default', severity: 'medium', location: { file: 'main.tf' } };
+    const head = [report([sqlInjection(12)], { jobName: 'semgrep-sast', jobId: 1 })];
+    const base = [
+      report([sqlInjection(12)], { jobName: 'semgrep-sast', jobId: 3 }),
+      report([iacFinding], { jobName: 'iac-sast', jobId: 4 }),
+    ];
+    const fixedNames = (result: ReturnType<typeof compareReports>) =>
+      result.fixed.map((finding: Finding) => finding.name);
+
+    it('does not claim findings of an unfinished job are fixed', () => {
+      const result = compareReports(head, base, {
+        unfinishedJobs: ['iac-sast'],
+        jobNames: ['semgrep-sast', 'iac-sast'],
+        awaitingDownstream: false,
+      });
+
+      expect(result.fixed).toEqual([]);
+      expect(result.pendingJobs).toEqual(['iac-sast']);
+    });
+
+    it('holds back jobs that may be in a downstream pipeline not created yet', () => {
+      const result = compareReports(head, base, {
+        unfinishedJobs: [],
+        jobNames: ['semgrep-sast', 'trigger-child'],
+        awaitingDownstream: true,
+      });
+
+      expect(result.fixed).toEqual([]);
+      expect(result.pendingJobs).toEqual(['iac-sast']);
+    });
+
+    it('still reports fixes once every job is listed and finished', () => {
+      // `iac-sast` is gone from the head pipeline altogether, as after a rename;
+      // with nothing still running, its findings really are absent.
+      const result = compareReports(head, base, {
+        unfinishedJobs: [],
+        jobNames: ['semgrep-sast'],
+        awaitingDownstream: false,
+      });
+
+      expect(fixedNames(result)).toEqual(['Insecure default']);
+      expect(result.pendingJobs).toEqual([]);
+    });
+  });
+
   it('matches across jobs of the same report type', () => {
     // The base ran one sast job; the head split it into two.
     const head = [

@@ -1,5 +1,12 @@
 import { compareFindings, countBySeverity } from './severity';
-import type { Comparison, Finding, FindingStatus, ParsedReport, ReportType } from './types';
+import type {
+  Comparison,
+  Finding,
+  FindingStatus,
+  ParsedReport,
+  PipelineProgress,
+  ReportType,
+} from './types';
 
 /**
  * Identity of a finding *across branches*, which is a different question from
@@ -82,10 +89,16 @@ function imageWithoutTag(image: string | undefined): string | undefined {
  * `fixed` is withheld symmetrically: base findings of a type this merge
  * request's pipeline no longer reports are dropped rather than claimed as
  * resolved.
+ *
+ * So are base findings from a job the merge request's pipeline is still
+ * running. Matching per type would otherwise read a finished `semgrep-sast`
+ * alongside a running `iac-sast` as every IaC finding having been fixed.
+ * `progress` describes the head pipeline; leaving it out treats it as finished.
  */
 export function compareReports(
   head: ParsedReport[],
   base: ParsedReport[],
+  progress?: PipelineProgress,
 ): Omit<Comparison, 'base'> {
   const comparableTypes = readableTypes(base);
   const headTypes = readableTypes(head);
@@ -163,7 +176,10 @@ export function compareReports(
   }
 
   const newFindings = headFindings.filter((finding) => status[finding.key] === 'new');
-  const fixed = baseFindings
+  const pendingJobs = unfinishedBaseJobs(base, progress);
+  const fixed = base
+    .filter((report) => !report.error && !pendingJobs.includes(report.source.jobName))
+    .flatMap((report) => report.findings)
     .filter((finding) => !consumed.has(finding) && headTypes.has(finding.reportType))
     .sort(compareFindings);
 
@@ -176,7 +192,25 @@ export function compareReports(
     uncomparableCount: count(status, 'uncomparable'),
     baseReportCount: base.length,
     baseUnreadableCount: base.filter((report) => report.error).length,
+    pendingJobs,
   };
+}
+
+/**
+ * Base jobs the head pipeline has yet to finish its own run of: listed and
+ * unfinished, or not listed at all while a downstream pipeline that may hold
+ * them has still to be created. Matched by name, the only thing two pipelines'
+ * runs of one job share.
+ */
+function unfinishedBaseJobs(base: ParsedReport[], progress: PipelineProgress | undefined): string[] {
+  if (!progress) return [];
+  const unfinished = new Set(progress.unfinishedJobs);
+  const listed = new Set(progress.jobNames);
+  const names = base
+    .filter((report) => !report.error)
+    .map((report) => report.source.jobName)
+    .filter((name) => unfinished.has(name) || (progress.awaitingDownstream && !listed.has(name)));
+  return [...new Set(names)].sort();
 }
 
 /** Report types a set of reports actually delivered findings from, error-free. */

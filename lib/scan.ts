@@ -19,6 +19,7 @@ import {
   SECURITY_REPORT_TYPES,
   type ComparisonState,
   type ParsedReport,
+  type PipelineProgress,
   type ReportError,
   type ReportSource,
   type ScanResult,
@@ -27,6 +28,7 @@ import {
 export interface Discovery {
   info: MrInfo;
   sources: ReportSource[];
+  progress: PipelineProgress;
 }
 
 export type DiscoveryOutcome =
@@ -67,12 +69,12 @@ export async function discoverReports(
   }
 
   try {
-    const sources = await discoverReportSources(
+    const { sources, progress } = await discoverReportSources(
       info,
       info.pipelineId,
       settings.childPipelineDepth,
     );
-    return { status: 'found', discovery: { info, sources } };
+    return { status: 'found', discovery: { info, sources, progress } };
   } catch (error) {
     return {
       status: 'error',
@@ -144,7 +146,7 @@ function pastExpiry(value: string | undefined, now: Date): string | null {
  */
 export async function loadReports(
   page: MrPageContext,
-  { info, sources }: Discovery,
+  { info, sources, progress }: Discovery,
 ): Promise<ScanResult> {
   const reports = sortReports(
     await downloadReports(sources, blobUrlBuilder(page, info.diffHeadSha)),
@@ -158,6 +160,7 @@ export async function loadReports(
     counts: countBySeverity(findings),
     pipelineId: info.pipelineId!,
     pipelineWebUrl: info.pipelineWebUrl,
+    progress,
     // Filled in by phase three, which runs once these are already on screen.
     comparison: { status: 'loading' },
   };
@@ -288,12 +291,13 @@ export async function loadComparison(
           ? `${page.pathPrefix}/-/commit/${candidate.sha}`
           : undefined,
       },
-      ...compareReports(head.reports, reports),
+      ...compareReports(head.reports, reports, head.progress),
     };
     log(
       `compared with pipeline ${candidate.pipelineId} (${candidate.strategy})`,
       `${comparison.newCounts.total} new, ${comparison.existingCount} existing,`,
       `${comparison.uncomparableCount} uncomparable, ${comparison.fixed.length} fixed`,
+      comparison.pendingJobs.length ? `(fixes not checked for ${comparison.pendingJobs.join(', ')})` : '',
     );
     return { status: 'ready', comparison };
   }
@@ -326,7 +330,8 @@ function loadBaseReports(
   }
 
   const pending = (async () => {
-    const sources = await discoverReportSources(
+    // Candidates are finished pipelines, so their progress has nothing to add.
+    const { sources } = await discoverReportSources(
       info,
       candidate.pipelineId,
       settings.childPipelineDepth,

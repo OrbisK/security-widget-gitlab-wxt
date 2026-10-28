@@ -182,7 +182,7 @@ describe('discoverReportSources', () => {
   it('follows as many levels of child pipelines as it is asked for', async () => {
     stubFetch(routes({ 1: 2, 2: 3 }));
 
-    const sources = await discoverReportSources(info, 1, 2);
+    const { sources } = await discoverReportSources(info, 1, 2);
 
     expect(sources.map((source) => source.jobName)).toEqual(['sast-1', 'sast-2', 'sast-3']);
   });
@@ -190,10 +190,42 @@ describe('discoverReportSources', () => {
   it('stays in the pipeline itself at depth zero', async () => {
     const seen = stubFetch(routes({ 1: 2 }));
 
-    const sources = await discoverReportSources(info, 1, 0);
+    const { sources } = await discoverReportSources(info, 1, 0);
 
     expect(sources.map((source) => source.jobName)).toEqual(['sast-1']);
     // Nothing downstream is even asked about, which is the point of the setting.
     expect(seen().some((url) => url.includes('/bridges'))).toBe(false);
+  });
+
+  it('names the jobs that have not finished, here and downstream', async () => {
+    stubFetch({
+      '/pipelines/1/jobs': [
+        { ...job(1), status: 'success' },
+        { id: 11, name: 'iac-sast', web_url: 'https://gitlab.example/g/p/-/jobs/11', status: 'running' },
+        { id: 12, name: 'dast', web_url: 'https://gitlab.example/g/p/-/jobs/12', status: 'manual' },
+      ],
+      '/pipelines/1/bridges': [{ status: 'success', downstream_pipeline: { id: 2, project_id: 7 } }],
+      '/pipelines/2/jobs': [{ ...job(2), artifacts: [], status: 'pending' }],
+      '/pipelines/2/bridges': [],
+    });
+
+    const { progress } = await discoverReportSources(info, 1, 1);
+
+    expect(progress).toEqual({
+      unfinishedJobs: ['iac-sast', 'dast', 'sast-2'],
+      jobNames: ['sast-1', 'iac-sast', 'dast', 'sast-2'],
+      awaitingDownstream: false,
+    });
+  });
+
+  it('notices a trigger job that has not created its pipeline yet', async () => {
+    stubFetch({
+      '/jobs': [{ ...job(1), status: 'success' }],
+      '/bridges': [{ status: 'created', downstream_pipeline: null }],
+    });
+
+    const { progress } = await discoverReportSources(info, 1, 1);
+
+    expect(progress.awaitingDownstream).toBe(true);
   });
 });

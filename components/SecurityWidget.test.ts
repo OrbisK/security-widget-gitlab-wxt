@@ -6,7 +6,13 @@ import { parseReport } from '@/lib/reports';
 import { compareReports } from '@/lib/compare';
 import { countBySeverity } from '@/lib/severity';
 import { DEFAULT_SETTINGS, type Settings } from '@/lib/storage';
-import type { BasePipeline, ComparisonState, ParsedReport, ScanResult } from '@/lib/types';
+import type {
+  BasePipeline,
+  ComparisonState,
+  ParsedReport,
+  PipelineProgress,
+  ScanResult,
+} from '@/lib/types';
 
 function report(vulnerabilities: unknown[]): ParsedReport {
   const jobWebUrl = 'https://gitlab.example/g/p/-/jobs/7';
@@ -33,14 +39,20 @@ async function render(
   head: ParsedReport[],
   options: {
     base?: ParsedReport[];
+    progress?: PipelineProgress;
     comparison?: ComparisonState;
     settings?: Partial<Settings>;
     query?: string;
   } = {},
 ): Promise<string> {
   const findings = head.flatMap((report) => report.findings);
+  const progress = options.progress ?? {
+    unfinishedJobs: [],
+    jobNames: ['semgrep-sast'],
+    awaitingDownstream: false,
+  };
   const comparison: ComparisonState = options.base
-    ? { status: 'ready', comparison: { base, ...compareReports(head, options.base) } }
+    ? { status: 'ready', comparison: { base, ...compareReports(head, options.base, progress) } }
     : (options.comparison ?? { status: 'off' });
 
   const result: ScanResult = {
@@ -49,6 +61,7 @@ async function render(
     counts: countBySeverity(findings),
     pipelineId: 99,
     pipelineWebUrl: 'https://gitlab.example/g/p/-/pipelines/99',
+    progress,
     comparison,
   };
 
@@ -154,6 +167,16 @@ describe('SecurityWidget header', () => {
     expect(html).toContain('Fixed by this merge request');
     expect(html).toContain('glsw-badge-fixed');
     expect(html).toContain('1 fixed here');
+  });
+
+  it('says which jobs are not checked for fixes while they still run', async () => {
+    const html = await render([report([sqlInjection])], {
+      base: [report([sqlInjection, hardcodedSecret])],
+      progress: { unfinishedJobs: ['semgrep-sast'], jobNames: ['semgrep-sast'], awaitingDownstream: false },
+    });
+
+    expect(html).not.toContain('Fixed by this merge request');
+    expect(html).toContain('fixes not checked for semgrep-sast until it finishes');
   });
 
   it('hides pre-existing findings on request, but never uncomparable ones', async () => {
