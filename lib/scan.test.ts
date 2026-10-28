@@ -105,6 +105,7 @@ function discovery(
     sources: overrides.sources ?? [source()],
     progress: {
       unfinishedJobs: [],
+      manualJobs: [],
       jobNames: ['semgrep-sast'],
       awaitingDownstream: false,
       ...overrides.progress,

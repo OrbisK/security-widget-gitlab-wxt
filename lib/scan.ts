@@ -90,7 +90,8 @@ export async function discoverReports(
  * A finished pipeline's reports cannot change, so all that is worth asking then
  * is whether a push has started a new one — one cheap request rather than
  * listing every job again. A running pipeline is listed in full, since that is
- * the only way to see its jobs finish.
+ * the only way to see its jobs finish. One left with only manual jobs counts as
+ * finished: someone starting a manual scan job is picked up by a refresh.
  */
 export async function rediscoverReports(
   page: MrPageContext,

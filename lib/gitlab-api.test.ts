@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { discoverReportSources, fetchMrDiffRefs, findBasePipelines } from './gitlab-api';
+import { isRunning } from './types';
 
 const info = { apiBase: '/api/v4', projectId: 7 };
 
@@ -213,6 +214,7 @@ describe('discoverReportSources', () => {
 
     expect(progress).toEqual({
       unfinishedJobs: ['iac-sast', 'dast', 'sast-2'],
+      manualJobs: ['dast'],
       jobNames: ['sast-1', 'iac-sast', 'dast', 'sast-2'],
       awaitingDownstream: false,
     });
@@ -227,5 +229,18 @@ describe('discoverReportSources', () => {
     const { progress } = await discoverReportSources(info, 1, 1);
 
     expect(progress.awaitingDownstream).toBe(true);
+  });
+
+  it('counts a manual trigger job as waiting, not running', async () => {
+    stubFetch({
+      '/jobs': [{ ...job(1), status: 'success' }],
+      '/bridges': [{ name: 'deploy-child', status: 'manual', downstream_pipeline: null }],
+    });
+
+    const { progress } = await discoverReportSources(info, 1, 1);
+
+    expect(progress.awaitingDownstream).toBe(true);
+    expect(progress.manualJobs).toEqual(['deploy-child']);
+    expect(isRunning(progress)).toBe(false);
   });
 });

@@ -144,10 +144,26 @@ const comparison = computed<Comparison | null>(() =>
 const targetBranch = computed(() => comparison.value?.base.targetBranch);
 
 /**
- * Some scan jobs may still report. What is on screen is real, but an empty list
- * is not yet a clean bill of health.
+ * The scan jobs still running, when that can be told: the comparison knows which
+ * jobs reported on the target branch, and so which unfinished jobs here are
+ * scans rather than a deploy. Manual ones are left out — they are not running,
+ * and may never be. Null without a comparison to say.
  */
-const running = computed(() => (result.value ? isRunning(result.value.progress) : false));
+const runningScans = computed(() => {
+  if (!comparison.value || !result.value) return null;
+  const manual = new Set(result.value.progress.manualJobs);
+  return comparison.value.pendingJobs.filter((name) => !manual.has(name));
+});
+
+/**
+ * Some scan jobs may still report. What is on screen is real, but an empty list
+ * is not yet a clean bill of health. Without a comparison, any job still running
+ * might be a scan.
+ */
+const running = computed(() => {
+  if (runningScans.value) return runningScans.value.length > 0;
+  return result.value ? isRunning(result.value.progress) : false;
+});
 
 /**
  * A finding with no entry in the map reads as `uncomparable` rather than
@@ -559,7 +575,7 @@ const isCollapsible = computed(
           </template>
           <template v-if="running">
             · <span class="glsw-muted">
-              still running,
+              {{ runningScans?.length ? runningScans.join(', ') : 'pipeline' }} still running,
               {{ settings.autoRefresh ? 'updates as jobs finish' : 'refresh once jobs finish' }}
             </span>
           </template>

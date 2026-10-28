@@ -203,8 +203,16 @@ export interface Comparison {
  * findings says nothing about whether those findings are gone.
  */
 export interface PipelineProgress {
-  /** Jobs that have not finished, including manual ones nobody has started. */
+  /**
+   * Jobs that have not finished, including manual ones nobody has started —
+   * their reports are missing all the same. Trigger jobs are listed here too.
+   */
   unfinishedJobs: string[];
+  /**
+   * The unfinished jobs that wait for someone to start them, such as a manual
+   * deploy. They may never run, so they do not make the pipeline running.
+   */
+  manualJobs: string[];
   /** Every job listed, finished or not. */
   jobNames: string[];
   /**
@@ -214,9 +222,13 @@ export interface PipelineProgress {
   awaitingDownstream: boolean;
 }
 
-/** True while some of the pipeline's reports may still be on their way. */
+/**
+ * True while the pipeline is still making progress on its own. Says nothing
+ * about which of its jobs are scans: a deploy still running counts too.
+ */
 export function isRunning(progress: PipelineProgress): boolean {
-  return progress.unfinishedJobs.length > 0 || progress.awaitingDownstream;
+  const manual = new Set(progress.manualJobs);
+  return progress.unfinishedJobs.some((name) => !manual.has(name));
 }
 
 /**
