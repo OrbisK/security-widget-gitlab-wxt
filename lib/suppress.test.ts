@@ -56,11 +56,11 @@ describe('suppressionFor', () => {
 
   it('names every rule a split primary identifier runs as', () => {
     const split = finding({ typedIdentifiers: [{ type: 'semgrep_id', value: 'bandit.B611' }] });
-    expect(suppressionFor(split)?.comment).toBe('# nosemgrep: bandit.B611-1, bandit.B611-2');
+    expect(suppressionFor(split)).toMatchObject({ comment: '# nosemgrep: bandit.B611-1, bandit.B611-2' });
   });
 
   it('falls back to a bare nosemgrep without a semgrep id', () => {
-    expect(suppressionFor(finding({ typedIdentifiers: [] }))?.comment).toBe('# nosemgrep');
+    expect(suppressionFor(finding({ typedIdentifiers: [] }))).toMatchObject({ comment: '# nosemgrep' });
   });
 
   it('suggests gitleaks:allow on the same line for secret detection', () => {
@@ -97,8 +97,29 @@ describe('suppressionFor', () => {
     expect(suppressionFor(finding({ scannerId: undefined }))).toBeUndefined();
   });
 
-  it('offers nothing without a file to put the comment in', () => {
-    expect(suppressionFor(finding({ file: undefined }))).toBeUndefined();
-    expect(suppressionFor(finding({ file: 'data/fixtures.json' }))).toBeUndefined();
+  it('offers the rule id when the file takes no comment we know', () => {
+    expect(suppressionFor(finding({ file: 'data/fixtures.json' }))).toEqual({
+      kind: 'rule-id',
+      ruleId: 'bandit.B101',
+    });
+    expect(
+      suppressionFor(
+        finding({ file: undefined, typedIdentifiers: [{ type: 'semgrep_id', value: 'bandit.B611' }] }),
+      ),
+    ).toEqual({ kind: 'rule-id', ruleId: 'bandit.B611-1, bandit.B611-2' });
+  });
+
+  it('offers the gitleaks rule id for a secret in a file without comments', () => {
+    const secret = finding({
+      reportType: 'secret_detection',
+      scannerId: 'gitleaks',
+      file: 'config/credentials.json',
+      typedIdentifiers: [{ type: 'gitleaks_rule_id', value: 'aws-access-token' }],
+    });
+    expect(suppressionFor(secret)).toEqual({ kind: 'rule-id', ruleId: 'aws-access-token' });
+  });
+
+  it('offers nothing with neither a comment syntax nor a rule id', () => {
+    expect(suppressionFor(finding({ file: 'data/fixtures.json', typedIdentifiers: [] }))).toBeUndefined();
   });
 });

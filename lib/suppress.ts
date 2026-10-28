@@ -2,16 +2,24 @@ import semgrepRuleIdMap from './semgrep-rule-ids.json';
 import type { Finding } from './types';
 
 /**
- * An inline comment that tells the finding's scanner to skip that line, ready
- * to paste into the reported file.
+ * How a finding can be silenced. Preferably an inline comment, ready to paste
+ * into the reported file; when the file takes no comment we know how to write,
+ * the scanner's rule id instead, for the reader's own ignore entry.
  */
-export interface Suppression {
-  comment: string;
-  /** Where the comment has to go relative to the reported line. */
-  placement: 'same-line' | 'line-above' | 'file-start';
-  /** What the comment silences, for the button's tooltip. */
-  scope: string;
-}
+export type Suppression =
+  | {
+      kind: 'comment';
+      comment: string;
+      /** Where the comment has to go relative to the reported line. */
+      placement: 'same-line' | 'line-above' | 'file-start';
+      /** What the comment silences, for the button's tooltip. */
+      scope: string;
+    }
+  | {
+      kind: 'rule-id';
+      /** Comma-separated when the finding's rule runs under several ids. */
+      ruleId: string;
+    };
 
 type CommentStyle = (text: string) => string;
 
@@ -83,7 +91,12 @@ function semgrepRuleIds(primaryIdentifier: string): string[] {
   ];
 }
 
-type Suppressor = (finding: Finding, style: CommentStyle) => Suppression;
+interface Scanner {
+  /** The ids the scanner's own ignore syntax names the finding's rule by. */
+  ruleIds(finding: Finding): string[];
+  /** The inline comment, naming `ruleIds` when there are any. */
+  comment(ruleIds: string[], style: CommentStyle): Omit<Extract<Suppression, { kind: 'comment' }>, 'kind'>;
+}
 
 /**
  * How to silence a finding in source, keyed by `Finding.scannerId`. Only
@@ -94,53 +107,62 @@ type Suppressor = (finding: Finding, style: CommentStyle) => Suppression;
  * Each names the finding's rule whenever the scanner can: a marker that names
  * no rule also silences whatever else is later found on that line.
  */
-const SCANNERS: Partial<Record<string, Suppressor>> = {
+const SCANNERS: Partial<Record<string, Scanner>> = {
   // Semgrep honors the marker on the first line of the match or the line above it.
-  semgrep: (finding, style) => {
-    const primaryIdentifier = identifier(finding, 'semgrep_id');
-    if (!primaryIdentifier) {
-      return {
-        comment: style('nosemgrep'),
-        placement: 'line-above',
-        scope: 'every Semgrep rule on the next line',
-      };
-    }
-    const ruleIds = semgrepRuleIds(primaryIdentifier);
-    return {
-      comment: style(`nosemgrep: ${ruleIds.join(', ')}`),
-      placement: 'line-above',
-      scope: `${ruleIds.join(', ')} on the next line`,
-    };
+  semgrep: {
+    ruleIds: (finding) => {
+      const primaryIdentifier = identifier(finding, 'semgrep_id');
+      return primaryIdentifier ? semgrepRuleIds(primaryIdentifier) : [];
+    },
+    comment: (ruleIds, style) =>
+      ruleIds.length
+        ? {
+            comment: style(`nosemgrep: ${ruleIds.join(', ')}`),
+            placement: 'line-above',
+            scope: `${ruleIds.join(', ')} on the next line`,
+          }
+        : {
+            comment: style('nosemgrep'),
+            placement: 'line-above',
+            scope: 'every Semgrep rule on the next line',
+          },
   },
   // Gitleaks looks for the marker anywhere on the line holding the secret, and
-  // has no inline form that names a rule.
-  gitleaks: (_finding, style) => ({
-    comment: style('gitleaks:allow'),
-    placement: 'same-line',
-    scope: 'secret detection on this line',
-  }),
+  // has no inline form that names a rule. Its rule id is still what a custom
+  // gitleaks config allowlists by.
+  gitleaks: {
+    ruleIds: (finding) => [identifier(finding, 'gitleaks_rule_id')].filter((id) => id !== undefined),
+    comment: (_ruleIds, style) => ({
+      comment: style('gitleaks:allow'),
+      placement: 'same-line',
+      scope: 'secret detection on this line',
+    }),
+  },
   // KICS can only name a query file-wide: `disable=` is read from the comments
   // that open the file, and `ignore-line` takes no query id.
-  kics: (finding, style) => {
-    const queryId = identifier(finding, 'kics_id');
-    if (!queryId) {
-      return {
-        comment: style('kics-scan ignore-line'),
-        placement: 'line-above',
-        scope: 'every KICS query on the next line',
-      };
-    }
-    return {
-      comment: style(`kics-scan disable=${queryId}`),
-      placement: 'file-start',
-      scope: 'this KICS query in the whole file',
-    };
+  kics: {
+    ruleIds: (finding) => [identifier(finding, 'kics_id')].filter((id) => id !== undefined),
+    comment: (ruleIds, style) =>
+      ruleIds.length
+        ? {
+            comment: style(`kics-scan disable=${ruleIds.join(',')}`),
+            placement: 'file-start',
+            scope: 'this KICS query in the whole file',
+          }
+        : {
+            comment: style('kics-scan ignore-line'),
+            placement: 'line-above',
+            scope: 'every KICS query on the next line',
+          },
   },
 };
 
 export function suppressionFor(finding: Finding): Suppression | undefined {
-  if (!finding.scannerId || !finding.file) return undefined;
-  const scanner = SCANNERS[finding.scannerId];
-  const style = commentStyleFor(finding.file);
-  return scanner && style ? scanner(finding, style) : undefined;
+  const scanner = finding.scannerId ? SCANNERS[finding.scannerId] : undefined;
+  if (!scanner) return undefined;
+
+  const ruleIds = scanner.ruleIds(finding);
+  const style = finding.file ? commentStyleFor(finding.file) : undefined;
+  if (style) return { kind: 'comment', ...scanner.comment(ruleIds, style) };
+  return ruleIds.length ? { kind: 'rule-id', ruleId: ruleIds.join(', ') } : undefined;
 }
