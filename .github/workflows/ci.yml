@@ -47,3 +47,20 @@ jobs:
 
       - name: Build (firefox)
         run: pnpm build:firefox
+
+      # The unpacked builds, so a pull request can be tried out before it is
+      # merged: unzip the download, then "Load unpacked" in chrome://extensions
+      # or "Load Temporary Add-on…" (its manifest.json) in about:debugging.
+      - name: Upload build (chrome)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chrome-mv3
+          path: .output/chrome-mv3
+          retention-days: 14
+
+      - name: Upload build (firefox)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: firefox-mv3
+          path: .output/firefox-mv3
+          retention-days: 14
