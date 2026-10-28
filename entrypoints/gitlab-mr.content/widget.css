@@ -462,6 +462,11 @@
   overflow-wrap: anywhere;
 }
 
+.glsw-copy {
+  font: inherit;
+  color: var(--glsw-link);
+}
+
 .glsw-finding-detail {
   padding: 6px 0 4px 72px;
 }

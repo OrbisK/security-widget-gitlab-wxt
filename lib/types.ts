@@ -81,6 +81,12 @@ export interface Finding {
   name: string;
   description?: string;
   scanner?: string;
+  /**
+   * The scanner's machine id, e.g. "semgrep" or "gitleaks". Unlike the display
+   * name it is stable between analyzer versions, so it is what decides how a
+   * finding can be suppressed in source.
+   */
+  scannerId?: string;
   file?: string;
   startLine?: number;
   endLine?: number;
