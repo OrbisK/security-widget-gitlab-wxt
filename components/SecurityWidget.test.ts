@@ -6,7 +6,13 @@ import { parseReport } from '@/lib/reports';
 import { compareReports } from '@/lib/compare';
 import { countBySeverity } from '@/lib/severity';
 import { DEFAULT_SETTINGS, type Settings } from '@/lib/storage';
-import type { BasePipeline, ComparisonState, ParsedReport, ScanResult } from '@/lib/types';
+import type {
+  BasePipeline,
+  ComparisonState,
+  ParsedReport,
+  PipelineProgress,
+  ScanResult,
+} from '@/lib/types';
 
 function report(vulnerabilities: unknown[]): ParsedReport {
   const jobWebUrl = 'https://gitlab.example/g/p/-/jobs/7';
@@ -33,14 +39,21 @@ async function render(
   head: ParsedReport[],
   options: {
     base?: ParsedReport[];
+    progress?: PipelineProgress;
     comparison?: ComparisonState;
     settings?: Partial<Settings>;
     query?: string;
   } = {},
 ): Promise<string> {
   const findings = head.flatMap((report) => report.findings);
+  const progress = options.progress ?? {
+    unfinishedJobs: [],
+    manualJobs: [],
+    jobNames: ['semgrep-sast'],
+    awaitingDownstream: false,
+  };
   const comparison: ComparisonState = options.base
-    ? { status: 'ready', comparison: { base, ...compareReports(head, options.base) } }
+    ? { status: 'ready', comparison: { base, ...compareReports(head, options.base, progress) } }
     : (options.comparison ?? { status: 'off' });
 
   const result: ScanResult = {
@@ -49,6 +62,7 @@ async function render(
     counts: countBySeverity(findings),
     pipelineId: 99,
     pipelineWebUrl: 'https://gitlab.example/g/p/-/pipelines/99',
+    progress,
     comparison,
   };
 
@@ -154,6 +168,75 @@ describe('SecurityWidget header', () => {
     expect(html).toContain('Fixed by this merge request');
     expect(html).toContain('glsw-badge-fixed');
     expect(html).toContain('1 fixed here');
+  });
+
+  it('does not call an empty list clean while scan jobs are still running', async () => {
+    const html = await render([report([])], {
+      progress: { unfinishedJobs: ['iac-sast'], manualJobs: [], jobNames: ['semgrep-sast', 'iac-sast'], awaitingDownstream: false },
+    });
+
+    expect(html).not.toContain('glsw-tone-success');
+    expect(html).toContain('No vulnerabilities so far, security scanning is still running');
+    expect(html).toMatch(/still running,\s+updates as jobs finish/);
+  });
+
+  it('offers a refresh once the results are in', async () => {
+    const html = await render([report([])]);
+
+    expect(html).toContain('aria-label="Refresh"');
+  });
+
+  it('says which jobs are not checked for fixes while they still run', async () => {
+    const html = await render([report([sqlInjection])], {
+      base: [report([sqlInjection, hardcodedSecret])],
+      progress: { unfinishedJobs: ['semgrep-sast'], manualJobs: [], jobNames: ['semgrep-sast'], awaitingDownstream: false },
+    });
+
+    expect(html).not.toContain('Fixed by this merge request');
+    expect(html).toContain('fixes not checked for semgrep-sast until it finishes');
+    expect(html).toMatch(/semgrep-sast still running,/);
+  });
+
+  it('is not still running once every scan has finished, whatever else is', async () => {
+    // A deploy still running and a manual job nobody started are not scans.
+    const html = await render([report([sqlInjection])], {
+      base: [report([sqlInjection])],
+      progress: {
+        unfinishedJobs: ['deploy', 'review-app'],
+        manualJobs: ['review-app'],
+        jobNames: ['semgrep-sast', 'deploy', 'review-app'],
+        awaitingDownstream: false,
+      },
+    });
+
+    expect(html).not.toContain('still running');
+  });
+
+  it('says the pipeline is running when it cannot tell which jobs are scans', async () => {
+    const html = await render([report([sqlInjection])], {
+      progress: {
+        unfinishedJobs: ['deploy'],
+        manualJobs: [],
+        jobNames: ['semgrep-sast', 'deploy'],
+        awaitingDownstream: false,
+      },
+    });
+
+    expect(html).toMatch(/pipeline still running,/);
+  });
+
+  it('is not running when only manual jobs are left', async () => {
+    const html = await render([report([])], {
+      progress: {
+        unfinishedJobs: ['review-app'],
+        manualJobs: ['review-app'],
+        jobNames: ['semgrep-sast', 'review-app'],
+        awaitingDownstream: false,
+      },
+    });
+
+    expect(html).toContain('glsw-tone-success');
+    expect(html).not.toContain('still running');
   });
 
   it('hides pre-existing findings on request, but never uncomparable ones', async () => {

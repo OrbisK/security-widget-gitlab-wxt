@@ -1,4 +1,9 @@
-import { isSecurityReportType, type ReportSource, type ReportType } from './types';
+import {
+  isSecurityReportType,
+  type PipelineProgress,
+  type ReportSource,
+  type ReportType,
+} from './types';
 import { splitRelativeRoot } from './gitlab-page';
 import { log, trace } from './debug';
 
@@ -65,12 +70,15 @@ interface Job {
   id: number;
   name: string;
   web_url: string;
+  status?: string;
   artifacts?: JobArtifact[] | null;
   /** When the job's artifacts are due to be erased; null means they are kept. */
   artifacts_expire_at?: string | null;
 }
 
 interface Bridge {
+  name?: string;
+  status?: string;
   downstream_pipeline?: { id: number; project_id: number } | null;
 }
 
@@ -339,8 +347,39 @@ function withQuery(url: string, params: Record<string, string>): string {
 }
 
 /**
+ * Job statuses that mean the job has not run to completion yet, so any report
+ * it declares is still to come. `manual` is among them: a scan job nobody has
+ * started has not reported anything either.
+ */
+const UNFINISHED_JOB_STATUSES = [
+  'created',
+  'waiting_for_resource',
+  'preparing',
+  'pending',
+  'running',
+  'canceling',
+  'scheduled',
+  'manual',
+];
+
+function isUnfinished(status: string | undefined): boolean {
+  return UNFINISHED_JOB_STATUSES.includes(status ?? '');
+}
+
+function emptyProgress(): PipelineProgress {
+  return { unfinishedJobs: [], manualJobs: [], jobNames: [], awaitingDownstream: false };
+}
+
+export interface DiscoveredSources {
+  sources: ReportSource[];
+  progress: PipelineProgress;
+}
+
+/**
  * Finds every job artifact in the pipeline that holds a security report,
- * following `childDepth` levels of downstream pipelines.
+ * following `childDepth` levels of downstream pipelines, along with which jobs
+ * have yet to finish — a running pipeline is common on a merge request page, and
+ * its unfinished jobs' reports are missing rather than empty.
  *
  * The download URL is built from the job's own `web_url`, so it stays correct
  * for jobs that live in a forked source project or under a relative URL root.
@@ -349,16 +388,29 @@ export async function discoverReportSources(
   info: Pick<MrInfo, 'apiBase' | 'projectId'>,
   pipelineId: number,
   childDepth: number,
-): Promise<ReportSource[]> {
-  const sources = await collectFromPipeline(info.apiBase, info.projectId, pipelineId, childDepth);
+): Promise<DiscoveredSources> {
+  const { sources, progress } = await collectFromPipeline(
+    info.apiBase,
+    info.projectId,
+    pipelineId,
+    childDepth,
+  );
   const deduped = dedupeSources(sources);
 
   log(
     `pipeline ${pipelineId}: ${deduped.length} security report artifact(s)`,
     deduped.map((source) => `${source.reportType} (job ${source.jobName}#${source.jobId})`),
   );
+  if (progress.unfinishedJobs.length > 0) {
+    log(
+      `pipeline ${pipelineId} has unfinished jobs:`,
+      progress.unfinishedJobs,
+      progress.manualJobs.length ? `(waiting to be started: ${progress.manualJobs.join(', ')})` : '',
+      progress.awaitingDownstream ? '(and a downstream pipeline is yet to be created)' : '',
+    );
+  }
 
-  return deduped;
+  return { sources: deduped, progress };
 }
 
 /**
@@ -383,7 +435,7 @@ async function collectFromPipeline(
   projectId: number,
   pipelineId: number,
   depthRemaining: number,
-): Promise<ReportSource[]> {
+): Promise<DiscoveredSources> {
   const jobsUrl =
     `${apiBase}/projects/${projectId}/pipelines/${pipelineId}/jobs?per_page=${LIST_PAGE_SIZE}`;
   const jobs = await fetchPaginated<Job>(jobsUrl);
@@ -399,6 +451,12 @@ async function collectFromPipeline(
   );
 
   const sources: ReportSource[] = [];
+  const progress: PipelineProgress = {
+    unfinishedJobs: jobs.filter((job) => isUnfinished(job.status)).map((job) => job.name),
+    manualJobs: jobs.filter((job) => job.status === 'manual').map((job) => job.name),
+    jobNames: jobs.map((job) => job.name),
+    awaitingDownstream: false,
+  };
   for (const job of jobs) {
     for (const artifact of job.artifacts ?? []) {
       if (!isSecurityReportType(artifact.file_type)) continue;
@@ -418,6 +476,19 @@ async function collectFromPipeline(
       `${apiBase}/projects/${projectId}/pipelines/${pipelineId}/bridges?per_page=${LIST_PAGE_SIZE}`,
     ).catch(() => [] as Bridge[]);
 
+    // A trigger job creates its downstream pipeline when it runs, so until then
+    // there are no jobs to list and nothing to say which reports are coming.
+    progress.awaitingDownstream = bridges.some(
+      (bridge) => !bridge.downstream_pipeline && isUnfinished(bridge.status),
+    );
+    // Listed with the jobs, so a manual trigger counts as waiting on someone
+    // rather than as running, just as a manual job does.
+    for (const bridge of bridges) {
+      if (!bridge.name || !isUnfinished(bridge.status)) continue;
+      progress.unfinishedJobs.push(bridge.name);
+      if (bridge.status === 'manual') progress.manualJobs.push(bridge.name);
+    }
+
     const children = bridges
       .map((bridge) => bridge.downstream_pipeline)
       .filter((pipeline): pipeline is { id: number; project_id: number } => Boolean(pipeline));
@@ -425,14 +496,20 @@ async function collectFromPipeline(
     const nested = await Promise.all(
       children.map((child) =>
         collectFromPipeline(apiBase, child.project_id, child.id, depthRemaining - 1).catch(
-          () => [] as ReportSource[],
+          (): DiscoveredSources => ({ sources: [], progress: emptyProgress() }),
         ),
       ),
     );
-    for (const list of nested) sources.push(...list);
+    for (const child of nested) {
+      sources.push(...child.sources);
+      progress.unfinishedJobs.push(...child.progress.unfinishedJobs);
+      progress.manualJobs.push(...child.progress.manualJobs);
+      progress.jobNames.push(...child.progress.jobNames);
+      progress.awaitingDownstream ||= child.progress.awaitingDownstream;
+    }
   }
 
-  return sources;
+  return { sources, progress };
 }
 
 /**

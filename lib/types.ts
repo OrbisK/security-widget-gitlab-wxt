@@ -189,6 +189,46 @@ export interface Comparison {
    */
   baseReportCount: number;
   baseUnreadableCount: number;
+  /**
+   * Base jobs whose findings were held back from `fixed` because this merge
+   * request's run of the same job has not finished: a report not uploaded yet
+   * is no evidence that anything was fixed.
+   */
+  pendingJobs: string[];
+}
+
+/**
+ * How far a pipeline has got, as far as its reports are concerned. Jobs that
+ * have not finished have not uploaded a report yet, so the absence of their
+ * findings says nothing about whether those findings are gone.
+ */
+export interface PipelineProgress {
+  /**
+   * Jobs that have not finished, including manual ones nobody has started —
+   * their reports are missing all the same. Trigger jobs are listed here too.
+   */
+  unfinishedJobs: string[];
+  /**
+   * The unfinished jobs that wait for someone to start them, such as a manual
+   * deploy. They may never run, so they do not make the pipeline running.
+   */
+  manualJobs: string[];
+  /** Every job listed, finished or not. */
+  jobNames: string[];
+  /**
+   * A trigger job has yet to create its downstream pipeline, so that
+   * pipeline's jobs are not listed at all — finished or not.
+   */
+  awaitingDownstream: boolean;
+}
+
+/**
+ * True while the pipeline is still making progress on its own. Says nothing
+ * about which of its jobs are scans: a deploy still running counts too.
+ */
+export function isRunning(progress: PipelineProgress): boolean {
+  const manual = new Set(progress.manualJobs);
+  return progress.unfinishedJobs.some((name) => !manual.has(name));
 }
 
 /**
@@ -208,6 +248,7 @@ export interface ScanResult {
   counts: SeverityCounts;
   pipelineId: number;
   pipelineWebUrl?: string;
+  progress: PipelineProgress;
   comparison: ComparisonState;
 }
 

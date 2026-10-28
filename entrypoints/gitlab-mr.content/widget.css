@@ -248,6 +248,7 @@
 .glsw-toggle,
 .glsw-more {
   flex: none;
+  box-sizing: border-box;
   padding: 4px 10px;
   border: 1px solid var(--glsw-border);
   border-radius: 4px;
@@ -259,6 +260,36 @@
 .glsw-toggle:hover,
 .glsw-more:hover {
   background: var(--glsw-bg-subtle);
+}
+
+/* The header's buttons sit together, closer than the gap to the summary. */
+.glsw-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+/*
+ * One explicit height for both, since their content cannot agree on one: the
+ * toggle's comes from the inherited font (`.glsw button` resets line-height
+ * along with it), the refresh button's from its icon. The extra class
+ * outranks that reset.
+ */
+.glsw-actions .glsw-toggle {
+  display: flex;
+  align-items: center;
+  height: 30px;
+}
+
+.glsw-actions .glsw-refresh {
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+}
+
+.glsw-refresh:disabled {
+  cursor: progress;
+  opacity: 0.6;
 }
 
 .glsw-more {
