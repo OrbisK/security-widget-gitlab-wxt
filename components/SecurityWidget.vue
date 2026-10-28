@@ -15,6 +15,7 @@ import {
 import { countBySeverity, severityRank } from '@/lib/severity';
 import type { Settings } from '@/lib/storage';
 import {
+  isRunning,
   REPORT_TYPE_LABELS,
   type Comparison,
   type Finding,
@@ -29,6 +30,13 @@ const props = defineProps<{
   settings: Settings;
   /** Prefills the search box; lets a server-rendered test see a filtered list. */
   initialQuery?: string;
+  /** A refresh the user asked for is in flight. */
+  refreshing?: boolean;
+}>();
+
+const emit = defineEmits<{
+  /** Read the pipeline and the target branch again. */
+  refresh: [];
 }>();
 
 const FIXED_KEY = 'fixed';
@@ -134,6 +142,12 @@ const comparison = computed<Comparison | null>(() =>
 );
 
 const targetBranch = computed(() => comparison.value?.base.targetBranch);
+
+/**
+ * Some scan jobs may still report. What is on screen is real, but an empty list
+ * is not yet a clean bill of health.
+ */
+const running = computed(() => (result.value ? isRunning(result.value.progress) : false));
 
 /**
  * A finding with no entry in the map reads as `uncomparable` rather than
@@ -355,6 +369,7 @@ const summary = computed(() => {
     if (hiddenAsExisting.value > 0) {
       return `No new vulnerabilities, ${existingFindings.value.length} already on ${targetBranch.value}`;
     }
+    if (running.value) return 'No vulnerabilities so far, security scanning is still running';
     return totalHiddenByFilter.value > 0
       ? 'Security scanning detected no vulnerabilities above your severity filter'
       : 'Security scanning detected no vulnerabilities';
@@ -392,7 +407,8 @@ const tone = computed(() => {
   // An empty list is only a clean bill of health if it is empty because there was
   // nothing to show — not because a filter is holding findings back.
   if (visibleCounts.value.total === 0) {
-    return failedReports.value.length || hiddenAsExisting.value > 0 ? 'warning' : 'success';
+    if (failedReports.value.length || hiddenAsExisting.value > 0) return 'warning';
+    return running.value ? 'neutral' : 'success';
   }
   // Introducing a vulnerability is the one case this merge request can fix by
   // being changed, so it is the one that gets the strongest signal.
@@ -409,6 +425,7 @@ const icon = computed(() => {
   if (newVisible.value.length > 0) return 'cross';
   const nothingToShow =
     visibleCounts.value.total === 0 && !failedReports.value.length && !hiddenAsExisting.value;
+  if (nothingToShow && running.value) return 'spinner';
   return nothingToShow ? 'check' : 'alert';
 });
 
@@ -540,6 +557,12 @@ const isCollapsible = computed(
             <span v-if="scannedLabel"> · </span>
             <a class="glsw-link" :href="result.pipelineWebUrl">pipeline #{{ result.pipelineId }}</a>
           </template>
+          <template v-if="running">
+            · <span class="glsw-muted">
+              still running,
+              {{ settings.autoRefresh ? 'updates as jobs finish' : 'refresh once jobs finish' }}
+            </span>
+          </template>
           <template v-if="unreadableLabel">
             · <span class="glsw-muted">{{ unreadableLabel }}</span>
           </template>
@@ -596,6 +619,32 @@ const isCollapsible = computed(
         </p>
       </div>
 
+      <button
+        v-if="state.status === 'ok'"
+        type="button"
+        class="glsw-toggle glsw-refresh"
+        aria-label="Refresh"
+        title="Read the pipeline and the target branch again"
+        :disabled="refreshing"
+        @click="emit('refresh')"
+      >
+        <svg
+          :class="{ 'glsw-spin': refreshing }"
+          viewBox="0 0 16 16"
+          width="14"
+          height="14"
+          aria-hidden="true"
+        >
+          <path
+            d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
       <button
         v-if="isCollapsible"
         type="button"

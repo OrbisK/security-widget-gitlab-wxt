@@ -16,6 +16,7 @@ import { parseReport } from './reports';
 import type { Settings } from './storage';
 import { compareFindings, countBySeverity } from './severity';
 import {
+  isRunning,
   SECURITY_REPORT_TYPES,
   type ComparisonState,
   type ParsedReport,
@@ -83,6 +84,50 @@ export async function discoverReports(
   }
 }
 
+/**
+ * Phase one again, for a merge request already on screen.
+ *
+ * A finished pipeline's reports cannot change, so all that is worth asking then
+ * is whether a push has started a new one — one cheap request rather than
+ * listing every job again. A running pipeline is listed in full, since that is
+ * the only way to see its jobs finish.
+ */
+export async function rediscoverReports(
+  page: MrPageContext,
+  settings: Settings,
+  previous: Discovery,
+): Promise<DiscoveryOutcome> {
+  if (!isRunning(previous.progress)) {
+    let info: MrInfo;
+    try {
+      info = await fetchMrInfo(page.pathPrefix, page.iid);
+    } catch (error) {
+      return { status: 'error', message: describe(error) };
+    }
+    if (info.pipelineId === previous.info.pipelineId) {
+      return { status: 'found', discovery: previous };
+    }
+  }
+  return discoverReports(page, settings);
+}
+
+/**
+ * Whether a fresh discovery would show anything the current one does not: a
+ * new head pipeline, a new report artifact, or a job that has since finished.
+ */
+export function discoveryChanged(before: Discovery, after: Discovery): boolean {
+  return discoverySignature(before) !== discoverySignature(after);
+}
+
+function discoverySignature({ info, sources, progress }: Discovery): string {
+  return JSON.stringify([
+    info.pipelineId,
+    sources.map((source) => `${source.jobId}:${source.reportType}`).sort(),
+    [...progress.unfinishedJobs].sort(),
+    progress.awaitingDownstream,
+  ]);
+}
+
 function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -139,6 +184,13 @@ function pastExpiry(value: string | undefined, now: Date): string | null {
 }
 
 /**
+ * Parsed head reports keyed by job and report type, for one merge request. A
+ * job's artifact does not change once uploaded, so a refresh while the pipeline
+ * runs only needs to download the reports of jobs that have finished since.
+ */
+export type ReportCache = Map<string, Promise<ParsedReport>>;
+
+/**
  * Phase two: download and normalize each report.
  *
  * A failure to read one report does not fail the scan — that report carries an
@@ -147,9 +199,10 @@ function pastExpiry(value: string | undefined, now: Date): string | null {
 export async function loadReports(
   page: MrPageContext,
   { info, sources, progress }: Discovery,
+  cache?: ReportCache,
 ): Promise<ScanResult> {
   const reports = sortReports(
-    await downloadReports(sources, blobUrlBuilder(page, info.diffHeadSha)),
+    await downloadReports(sources, blobUrlBuilder(page, info.diffHeadSha), cache),
   );
 
   const findings = reports.flatMap((report) => report.findings).sort(compareFindings);
@@ -170,29 +223,46 @@ export async function loadReports(
 async function downloadReports(
   sources: ReportSource[],
   blobUrl: BlobUrlBuilder | undefined,
+  cache?: ReportCache,
 ): Promise<ParsedReport[]> {
   return Promise.all(
-    sources.map(async (source): Promise<ParsedReport> => {
-      try {
-        const raw = await downloadReportJson(source.downloadUrl);
-        return parseReport(raw, source, { blobUrl });
-      } catch (cause) {
-        const failure = describeDownloadFailure(cause, source, new Date());
-        log(
-          `could not read ${source.reportType} from job ${source.jobName}#${source.jobId}:`,
-          `${failure.kind} —`,
-          failure.message,
-        );
-        return {
-          reportType: source.reportType,
-          source,
-          scanners: [],
-          findings: [],
-          error: failure,
-        };
-      }
+    sources.map((source) => {
+      const key = `${source.jobId}:${source.reportType}`;
+      const cached = cache?.get(key);
+      if (cached) return cached;
+
+      const pending = downloadReport(source, blobUrl);
+      // A failure may be passing, so only a report that was read is kept.
+      void pending.then((report) => {
+        if (!report.error) cache?.set(key, pending);
+      });
+      return pending;
     }),
   );
+}
+
+async function downloadReport(
+  source: ReportSource,
+  blobUrl: BlobUrlBuilder | undefined,
+): Promise<ParsedReport> {
+  try {
+    const raw = await downloadReportJson(source.downloadUrl);
+    return parseReport(raw, source, { blobUrl });
+  } catch (cause) {
+    const failure = describeDownloadFailure(cause, source, new Date());
+    log(
+      `could not read ${source.reportType} from job ${source.jobName}#${source.jobId}:`,
+      `${failure.kind} —`,
+      failure.message,
+    );
+    return {
+      reportType: source.reportType,
+      source,
+      scanners: [],
+      findings: [],
+      error: failure,
+    };
+  }
 }
 
 /**
@@ -309,6 +379,15 @@ export async function loadComparison(
         ? `none of the last ${settings.maxBasePipelines} pipelines on ${refs.targetBranch} has readable security reports`
         : `no pipeline on ${refs.targetBranch} has readable security reports`,
   };
+}
+
+/**
+ * Forgets every cached base report. Finished pipelines do not change, but a
+ * report that could not be read might be readable now, and a refresh the user
+ * asked for should not answer from memory.
+ */
+export function clearBaseReportCache(): void {
+  baseReportCache.clear();
 }
 
 function loadBaseReports(

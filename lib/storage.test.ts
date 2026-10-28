@@ -18,11 +18,13 @@ describe('withDefaults', () => {
       findingsPerPage: 0,
       maxBasePipelines: 99,
       childPipelineDepth: -1,
+      refreshIntervalSeconds: 1,
     });
 
     expect(settings.findingsPerPage).toBe(SETTING_LIMITS.findingsPerPage.min);
     expect(settings.maxBasePipelines).toBe(SETTING_LIMITS.maxBasePipelines.max);
     expect(settings.childPipelineDepth).toBe(SETTING_LIMITS.childPipelineDepth.min);
+    expect(settings.refreshIntervalSeconds).toBe(SETTING_LIMITS.refreshIntervalSeconds.min);
   });
 
   it('replaces a value that is not a number at all', () => {
