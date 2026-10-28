@@ -635,41 +635,42 @@ const isCollapsible = computed(
         </p>
       </div>
 
-      <button
-        v-if="state.status === 'ok'"
-        type="button"
-        class="glsw-toggle glsw-refresh"
-        aria-label="Refresh"
-        title="Read the pipeline and the target branch again"
-        :disabled="refreshing"
-        @click="emit('refresh')"
-      >
-        <svg
-          :class="{ 'glsw-spin': refreshing }"
-          viewBox="0 0 16 16"
-          width="14"
-          height="14"
-          aria-hidden="true"
+      <div v-if="state.status === 'ok'" class="glsw-actions">
+        <button
+          type="button"
+          class="glsw-toggle glsw-refresh"
+          aria-label="Refresh"
+          title="Read the pipeline and the target branch again"
+          :disabled="refreshing"
+          @click="emit('refresh')"
         >
-          <path
-            d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </button>
-      <button
-        v-if="isCollapsible"
-        type="button"
-        class="glsw-toggle"
-        :aria-expanded="!collapsed"
-        @click="collapsed = !collapsed"
-      >
-        {{ collapsed ? 'Show details' : 'Hide details' }}
-      </button>
+          <svg
+            :class="{ 'glsw-spin': refreshing }"
+            viewBox="0 0 16 16"
+            width="16"
+            height="16"
+            aria-hidden="true"
+          >
+            <path
+              d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+        <button
+          v-if="isCollapsible"
+          type="button"
+          class="glsw-toggle"
+          :aria-expanded="!collapsed"
+          @click="collapsed = !collapsed"
+        >
+          {{ collapsed ? 'Show details' : 'Hide details' }}
+        </button>
+      </div>
     </div>
 
     <div v-if="state.status === 'ok' && !collapsed" class="glsw-body">
