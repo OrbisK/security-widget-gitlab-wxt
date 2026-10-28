@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { compileQuery, suggest } from './query';
+import {
+  compileQuery,
+  selectedSeverities,
+  selectedStatuses,
+  suggest,
+  toggleSeverity,
+  toggleStatuses,
+} from './query';
 import type { Finding, FindingStatus } from './types';
 
 function finding(extra: Partial<Finding> = {}): Finding {
@@ -192,5 +199,87 @@ describe('suggest', () => {
   it('drops a suggestion that is already typed out', () => {
     expect(labels('sev:high')).toEqual([]);
     expect(labels('is')).toEqual([]);
+  });
+});
+
+describe('selectedSeverities', () => {
+  const selected = (input: string) => {
+    const set = selectedSeverities(input);
+    return set && [...set];
+  };
+
+  it('is null without a severity term', () => {
+    expect(selected('')).toBeNull();
+    expect(selected('file:*.ts xss')).toBeNull();
+    expect(selected('sev:')).toBeNull();
+    expect(selected('sev:bogus')).toBeNull();
+  });
+
+  it('expands comparisons and lists', () => {
+    expect(selected('severity:>=high')).toEqual(['critical', 'high']);
+    expect(selected('sev:info,low')).toEqual(['low', 'info']);
+    expect(selected('sev:low sev:info')).toEqual(['low', 'info']);
+  });
+
+  it('takes negations out', () => {
+    expect(selected('-sev:info')).toEqual(['critical', 'high', 'medium', 'low', 'unknown']);
+    expect(selected('sev:>=medium sev:!high')).toEqual(['critical', 'medium']);
+  });
+});
+
+describe('toggleSeverity', () => {
+  it('adds a severity term to the end of the query', () => {
+    expect(toggleSeverity('', 'info')).toBe('sev:info');
+    expect(toggleSeverity('file:*.ts ', 'info')).toBe('file:*.ts sev:info');
+  });
+
+  it('appends to and removes from a plain list in place', () => {
+    expect(toggleSeverity('sev:info', 'low')).toBe('sev:info,low');
+    expect(toggleSeverity('a severity:info b', 'low')).toBe('a severity:info,low b');
+    expect(toggleSeverity('sev:info,low', 'info')).toBe('sev:low');
+  });
+
+  it('drops the term once nothing is left in it', () => {
+    expect(toggleSeverity('sev:info', 'info')).toBe('');
+    expect(toggleSeverity('sev:info file:*.ts', 'info')).toBe('file:*.ts');
+  });
+
+  it('spells out a comparison before changing it', () => {
+    expect(toggleSeverity('sev:>=high', 'medium')).toBe('sev:critical,high,medium');
+    expect(toggleSeverity('sev:>=high', 'high')).toBe('sev:critical');
+  });
+
+  it('merges several severity terms into one', () => {
+    expect(toggleSeverity('sev:high xss -sev:low "a b"', 'critical')).toBe(
+      'sev:high,critical xss "a b"',
+    );
+    expect(toggleSeverity('sev:info sev:low', 'high')).toBe('sev:info,low,high');
+  });
+});
+
+describe('status selection', () => {
+  const selected = (input: string) => {
+    const set = selectedStatuses(input);
+    return set && [...set];
+  };
+
+  it('reads is: terms, leaving fp out of it', () => {
+    expect(selected('sev:high')).toBeNull();
+    expect(selected('is:fp')).toBeNull();
+    expect(selected('is:new')).toEqual(['new']);
+    expect(selected('-is:existing')).toEqual(['new', 'uncomparable', 'fixed']);
+  });
+
+  it('toggles statuses, several at a time', () => {
+    expect(toggleStatuses('sev:low', ['new'])).toBe('sev:low is:new');
+    expect(toggleStatuses('is:new', ['new'])).toBe('');
+    expect(toggleStatuses('is:new', ['new', 'uncomparable'])).toBe('is:new,uncomparable');
+    expect(toggleStatuses('is:new,uncomparable', ['new', 'uncomparable'])).toBe('');
+    expect(toggleStatuses('-is:fixed', ['existing'])).toBe('is:new,uncomparable');
+  });
+
+  it('leaves an is:fp term alone', () => {
+    expect(toggleStatuses('is:fp', ['new'])).toBe('is:fp is:new');
+    expect(toggleStatuses('is:fp is:new', ['new'])).toBe('is:fp');
   });
 });
