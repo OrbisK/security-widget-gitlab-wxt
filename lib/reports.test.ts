@@ -69,6 +69,10 @@ describe('parseReport', () => {
       key: 'sast:99:0:a1b2c3',
     });
     expect(finding.identifiers).toEqual(['CWE-78', 'SEMGREP_ID-rules.shell-injection']);
+    expect(finding.typedIdentifiers).toEqual([
+      { type: 'cwe', value: '78' },
+      { type: 'semgrep_id', value: 'rules.shell-injection' },
+    ]);
     expect(finding.links).toEqual([{ name: 'OWASP', url: 'https://owasp.org/command-injection' }]);
   });
 

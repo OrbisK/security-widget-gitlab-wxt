@@ -1,3 +1,4 @@
+import semgrepRuleIdMap from './semgrep-rule-ids.json';
 import type { Finding } from './types';
 
 /**
@@ -7,7 +8,7 @@ import type { Finding } from './types';
 export interface Suppression {
   comment: string;
   /** Where the comment has to go relative to the reported line. */
-  placement: 'same-line' | 'line-above';
+  placement: 'same-line' | 'line-above' | 'file-start';
   /** What the comment silences, for the button's tooltip. */
   scope: string;
 }
@@ -65,38 +66,81 @@ export function commentStyleFor(file: string): CommentStyle | undefined {
   return dot > 0 ? STYLE_BY_EXTENSION[basename.slice(dot + 1)] : undefined;
 }
 
+/** The finding's identifier of one type, e.g. its `semgrep_id`. */
+function identifier(finding: Finding, type: string): string | undefined {
+  return finding.typedIdentifiers?.find((candidate) => candidate.type === type)?.value;
+}
+
+/**
+ * The ids a semgrep rule runs under, which is what `nosemgrep` matches on. The
+ * report only carries GitLab's primary identifier; for most rules that is the
+ * rule id too, and the bundled mapping covers the rest — split rules such as
+ * `bandit.B611` running as `bandit.B611-1` and `bandit.B611-2`.
+ */
+function semgrepRuleIds(primaryIdentifier: string): string[] {
+  return (semgrepRuleIdMap.ruleIds as Partial<Record<string, string[]>>)[primaryIdentifier] ?? [
+    primaryIdentifier,
+  ];
+}
+
+type Suppressor = (finding: Finding, style: CommentStyle) => Suppression;
+
 /**
  * How to silence a finding in source, keyed by `Finding.scannerId`. Only
  * scanners that read an inline marker are listed; anything else — dependency
  * and container scanning, DAST, third-party tools — gets no suppression and is
  * dismissed in GitLab instead.
+ *
+ * Each names the finding's rule whenever the scanner can: a marker that names
+ * no rule also silences whatever else is later found on that line.
  */
-const SCANNERS: Partial<Record<string, (style: CommentStyle) => Suppression>> = {
-  // Semgrep honors the marker on the first line of the match or the line above
-  // it. Without a rule id it silences every rule on that line; the report only
-  // carries GitLab's primary identifier (e.g. `bandit.B101`), not the semgrep
-  // rule id the marker would need to be narrower.
-  semgrep: (style) => ({
-    comment: style('nosemgrep'),
-    placement: 'line-above',
-    scope: 'every Semgrep rule on the next line',
-  }),
-  // Gitleaks looks for the marker anywhere on the line holding the secret.
-  gitleaks: (style) => ({
+const SCANNERS: Partial<Record<string, Suppressor>> = {
+  // Semgrep honors the marker on the first line of the match or the line above it.
+  semgrep: (finding, style) => {
+    const primaryIdentifier = identifier(finding, 'semgrep_id');
+    if (!primaryIdentifier) {
+      return {
+        comment: style('nosemgrep'),
+        placement: 'line-above',
+        scope: 'every Semgrep rule on the next line',
+      };
+    }
+    const ruleIds = semgrepRuleIds(primaryIdentifier);
+    return {
+      comment: style(`nosemgrep: ${ruleIds.join(', ')}`),
+      placement: 'line-above',
+      scope: `${ruleIds.join(', ')} on the next line`,
+    };
+  },
+  // Gitleaks looks for the marker anywhere on the line holding the secret, and
+  // has no inline form that names a rule.
+  gitleaks: (_finding, style) => ({
     comment: style('gitleaks:allow'),
     placement: 'same-line',
     scope: 'secret detection on this line',
   }),
-  kics: (style) => ({
-    comment: style('kics-scan ignore-line'),
-    placement: 'line-above',
-    scope: 'every KICS query on the next line',
-  }),
+  // KICS can only name a query file-wide: `disable=` is read from the comments
+  // that open the file, and `ignore-line` takes no query id.
+  kics: (finding, style) => {
+    const queryId = identifier(finding, 'kics_id');
+    if (!queryId) {
+      return {
+        comment: style('kics-scan ignore-line'),
+        placement: 'line-above',
+        scope: 'every KICS query on the next line',
+      };
+    }
+    return {
+      comment: style(`kics-scan disable=${queryId}`),
+      placement: 'file-start',
+      scope: 'this KICS query in the whole file',
+    };
+  },
 };
 
 export function suppressionFor(finding: Finding): Suppression | undefined {
   if (!finding.scannerId || !finding.file) return undefined;
   const scanner = SCANNERS[finding.scannerId];
   const style = commentStyleFor(finding.file);
-  return scanner && style ? scanner(style) : undefined;
+  return scanner && style ? scanner(finding, style) : undefined;
 }

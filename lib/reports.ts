@@ -117,6 +117,9 @@ function toFinding(
     identifiers: (raw.identifiers ?? [])
       .map((identifier) => identifier.name || joinIdentifier(identifier))
       .filter((value): value is string => Boolean(value)),
+    typedIdentifiers: (raw.identifiers ?? []).flatMap(({ type, value }) =>
+      type && value ? [{ type, value }] : [],
+    ),
     solution: firstNonEmpty(raw.solution),
     links: (raw.links ?? [])
       .filter((link): link is { name?: string; url: string } => Boolean(link.url))

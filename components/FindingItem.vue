@@ -46,10 +46,11 @@ const suppression = computed(() => suppressionFor(props.finding));
 const suppressionTitle = computed(() => {
   const value = suppression.value;
   if (!value) return '';
-  const where =
-    value.placement === 'same-line'
-      ? 'at the end of the reported line'
-      : 'on its own line above the reported line';
+  const where = {
+    'same-line': 'at the end of the reported line',
+    'line-above': 'on its own line above the reported line',
+    'file-start': 'among the comments that open the file, before any code',
+  }[value.placement];
   return `Copy "${value.comment}" — paste it ${where}. Silences ${value.scope}.`;
 });
 
