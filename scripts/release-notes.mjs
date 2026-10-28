@@ -4,15 +4,17 @@ import { fileURLToPath } from 'node:url';
 /**
  * Turns a GitHub release body into AMO release notes.
  *
- * AMO shows release notes as plain text (with a handful of inline HTML tags),
- * so the Markdown uppt writes would show up with its `###` and `[text](url)`
- * intact. Only the changelog sections are kept: the "next patch release"
- * preamble, the compare link (it points at the deleted `release/v*` branch) and
+ * AMO renders a limited set of Markdown (bold, italic, links, lists,
+ * blockquotes, fenced code; see
+ * https://extensionworkshop.com/documentation/develop/create-an-appealing-listing/#make-use-of-markdown),
+ * so headings become bold lines and inline code loses its backticks, which
+ * AMO would show verbatim. Only the changelog sections are kept: the "next
+ * patch release" preamble, the compare link (it points at the deleted `release/v*` branch) and
  * the contributor list mean nothing on the listing.
  *
  * @param {string} body the release body, as `gh release view --json body` returns it
- * @param {string} [releaseUrl] appended as a pointer to the full notes
- * @returns {string} empty when nothing is left
+ * @param {string} [releaseUrl] appended as a link to the full notes
+ * @returns {string} AMO-flavoured Markdown, empty when nothing is left
  */
 export function toReleaseNotes(body, releaseUrl) {
   let lines = body.replace(/\r\n/g, '\n').split('\n');
@@ -31,10 +33,9 @@ export function toReleaseNotes(body, releaseUrl) {
     .filter((line) => !/^\*\*Full Changelog\*\*/.test(line))
     .map((line) =>
       line
-        .replace(/^#+\s*/, '')
+        .replace(/^#+\s*(.*?)\s*$/, (_, heading) => (heading ? `**${heading}**` : ''))
         .replace(/^[*-]\s+/, '- ')
-        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-        .replace(/\*\*|`/g, '')
+        .replace(/`/g, '')
         .trimEnd(),
     )
     .join('\n')
@@ -42,7 +43,7 @@ export function toReleaseNotes(body, releaseUrl) {
     .trim();
 
   if (!notes) return '';
-  return releaseUrl ? `${notes}\n\nFull release notes: ${releaseUrl}` : notes;
+  return releaseUrl ? `${notes}\n\n[Full release notes](${releaseUrl})` : notes;
 }
 
 // `node scripts/release-notes.mjs <body.md> [release-url]` prints the notes,
