@@ -81,6 +81,12 @@ export interface Finding {
   name: string;
   description?: string;
   scanner?: string;
+  /**
+   * The scanner's machine id, e.g. "semgrep" or "gitleaks". Unlike the display
+   * name it is stable between analyzer versions, so it is what decides how a
+   * finding can be suppressed in source.
+   */
+  scannerId?: string;
   file?: string;
   startLine?: number;
   endLine?: number;
@@ -88,6 +94,12 @@ export interface Finding {
   blobUrl?: string;
   /** e.g. "CWE-79", "CVE-2021-1234", "A03:2021" */
   identifiers: string[];
+  /**
+   * The same identifiers with their type kept, e.g. `semgrep_id: bandit.B101`
+   * or `kics_id: <query uuid>` — the scanner's own rule id is what an inline
+   * suppression has to name. Only identifiers that carry both are listed.
+   */
+  typedIdentifiers?: { type: string; value: string }[];
   solution?: string;
   links: { name?: string; url: string }[];
   /** Dependency scanning / container scanning only. */

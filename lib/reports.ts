@@ -65,8 +65,10 @@ export function parseReport(
   const reportScanner = report.scan?.scanner?.name ?? report.scan?.analyzer?.name;
   if (reportScanner) scanners.add(reportScanner);
 
+  const reportScannerId = firstNonEmpty(report.scan?.scanner?.id, report.scan?.analyzer?.id);
+
   const findings = vulnerabilities.map((vulnerability, index) => {
-    const finding = toFinding(vulnerability, source, index, context);
+    const finding = toFinding(vulnerability, source, index, context, reportScannerId);
     if (finding.scanner) scanners.add(finding.scanner);
     return finding;
   });
@@ -84,6 +86,7 @@ function toFinding(
   source: ReportSource,
   index: number,
   context: ParseContext,
+  reportScannerId: string | undefined,
 ): Finding {
   const location = raw.location ?? {};
   const file = location.file || undefined;
@@ -104,6 +107,9 @@ function toFinding(
     name,
     description,
     scanner: raw.scanner?.name || undefined,
+    // The report-level id wins: newer schemas dropped the per-finding scanner,
+    // which only older analyzers still fill in.
+    scannerId: reportScannerId ?? firstNonEmpty(raw.scanner?.id),
     file,
     startLine,
     endLine: numberOrUndefined(location.end_line),
@@ -111,6 +117,9 @@ function toFinding(
     identifiers: (raw.identifiers ?? [])
       .map((identifier) => identifier.name || joinIdentifier(identifier))
       .filter((value): value is string => Boolean(value)),
+    typedIdentifiers: (raw.identifiers ?? []).flatMap(({ type, value }) =>
+      type && value ? [{ type, value }] : [],
+    ),
     solution: firstNonEmpty(raw.solution),
     links: (raw.links ?? [])
       .filter((link): link is { name?: string; url: string } => Boolean(link.url))

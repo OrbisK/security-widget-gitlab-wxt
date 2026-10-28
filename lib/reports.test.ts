@@ -69,7 +69,28 @@ describe('parseReport', () => {
       key: 'sast:99:0:a1b2c3',
     });
     expect(finding.identifiers).toEqual(['CWE-78', 'SEMGREP_ID-rules.shell-injection']);
+    expect(finding.typedIdentifiers).toEqual([
+      { type: 'cwe', value: '78' },
+      { type: 'semgrep_id', value: 'rules.shell-injection' },
+    ]);
     expect(finding.links).toEqual([{ name: 'OWASP', url: 'https://owasp.org/command-injection' }]);
+  });
+
+  it('takes the scanner id from the report, then the analyzer, then the finding', () => {
+    const scannerIdOf = (raw: object) => parseReport(raw, source()).findings[0].scannerId;
+    const vulnerability = { name: 'x', scanner: { id: 'legacy', name: 'Legacy' } };
+
+    expect(
+      scannerIdOf({
+        scan: { scanner: { id: 'semgrep' }, analyzer: { id: 'semgrep-analyzer' } },
+        vulnerabilities: [vulnerability],
+      }),
+    ).toBe('semgrep');
+    expect(
+      scannerIdOf({ scan: { analyzer: { id: 'kics' } }, vulnerabilities: [vulnerability] }),
+    ).toBe('kics');
+    expect(scannerIdOf({ vulnerabilities: [vulnerability] })).toBe('legacy');
+    expect(scannerIdOf({ vulnerabilities: [{ name: 'x' }] })).toBeUndefined();
   });
 
   it('falls back to message and cve on older analyzer output', () => {

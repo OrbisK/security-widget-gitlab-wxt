@@ -1,0 +1,48 @@
+name: semgrep-rules
+
+# Checks that lib/semgrep-rule-ids.json still matches the rule pack GitLab's
+# semgrep analyzer ships. Kept out of `ci` on purpose: an upstream release is not
+# something a pull request did, so it should not turn unrelated pull requests
+# red. The schedule catches upstream releases; the pull request trigger catches
+# a hand-edited table or a generator change that was not rerun.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - lib/semgrep-rule-ids.json
+      - scripts/generate-semgrep-rule-ids.ts
+      - .github/workflows/semgrep-rules.yml
+
+permissions:
+  contents: read
+
+jobs:
+  up-to-date:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate
+        run: pnpm generate:semgrep-rule-ids
+
+      - name: Compare
+        run: |
+          if ! git diff --exit-code lib/semgrep-rule-ids.json; then
+            echo "::error file=lib/semgrep-rule-ids.json::Out of date with the rule pack the semgrep analyzer ships. Run 'pnpm generate:semgrep-rule-ids' and commit the result."
+            exit 1
+          fi

@@ -1,0 +1,498 @@
+{
+  "source": "gitlab-org/security-products/sast-rules v2.10.1",
+  "ruleIds": {
+    "bandit.B611": [
+      "bandit.B611-1",
+      "bandit.B611-2"
+    ],
+    "find_sec_bugs.AWS_QUERY_INJECTION": [
+      "find_sec_bugs_scala.AWS_QUERY_INJECTION-1"
+    ],
+    "find_sec_bugs.BAD_HEXA_CONVERSION": [
+      "find_sec_bugs_scala.BAD_HEXA_CONVERSION-1"
+    ],
+    "find_sec_bugs.BAD_HEXA_CONVERSION-1": [
+      "find_sec_bugs.BAD_HEXA_CONVERSION-1",
+      "find_sec_bugs_kotlin.BAD_HEXA_CONVERSION-1"
+    ],
+    "find_sec_bugs.BEAN_PROPERTY_INJECTION": [
+      "find_sec_bugs_scala.BEAN_PROPERTY_INJECTION-1"
+    ],
+    "find_sec_bugs.BLOWFISH_KEY_SIZE": [
+      "find_sec_bugs_scala.BLOWFISH_KEY_SIZE-1"
+    ],
+    "find_sec_bugs.BLOWFISH_KEY_SIZE-1": [
+      "find_sec_bugs.BLOWFISH_KEY_SIZE-1",
+      "find_sec_bugs_kotlin.BLOWFISH_KEY_SIZE-1"
+    ],
+    "find_sec_bugs.CIPHER_INTEGRITY": [
+      "find_sec_bugs_scala.CIPHER_INTEGRITY-1"
+    ],
+    "find_sec_bugs.CIPHER_INTEGRITY-1": [
+      "find_sec_bugs.CIPHER_INTEGRITY-1",
+      "find_sec_bugs_kotlin.CIPHER_INTEGRITY-1"
+    ],
+    "find_sec_bugs.COMMAND_INJECTION-1": [
+      "find_sec_bugs.COMMAND_INJECTION-1",
+      "find_sec_bugs_kotlin.COMMAND_INJECTION-1"
+    ],
+    "find_sec_bugs.COMMAND_INJECTION-1.SCALA_COMMAND_INJECTION-1": [
+      "find_sec_bugs_scala.COMMAND_INJECTION-1.SCALA_COMMAND_INJECTION-1"
+    ],
+    "find_sec_bugs.COOKIE_PERSISTENT": [
+      "find_sec_bugs_scala.COOKIE_PERSISTENT-1"
+    ],
+    "find_sec_bugs.COOKIE_USAGE": [
+      "find_sec_bugs_scala.COOKIE_USAGE-1"
+    ],
+    "find_sec_bugs.CRLF_INJECTION_LOGS": [
+      "find_sec_bugs_scala.CRLF_INJECTION_LOGS-1"
+    ],
+    "find_sec_bugs.CUSTOM_INJECTION": [
+      "find_sec_bugs_scala.CUSTOM_INJECTION-1"
+    ],
+    "find_sec_bugs.CUSTOM_INJECTION-2": [
+      "find_sec_bugs_scala.CUSTOM_INJECTION-2"
+    ],
+    "find_sec_bugs.CUSTOM_MESSAGE_DIGEST": [
+      "find_sec_bugs_scala.CUSTOM_MESSAGE_DIGEST-1"
+    ],
+    "find_sec_bugs.CUSTOM_MESSAGE_DIGEST-1": [
+      "find_sec_bugs.CUSTOM_MESSAGE_DIGEST-1",
+      "find_sec_bugs_kotlin.CUSTOM_MESSAGE_DIGEST-1"
+    ],
+    "find_sec_bugs.DANGEROUS_PERMISSION_COMBINATION": [
+      "find_sec_bugs_scala.DANGEROUS_PERMISSION_COMBINATION-1"
+    ],
+    "find_sec_bugs.DANGEROUS_PERMISSION_COMBINATION-1": [
+      "find_sec_bugs.DANGEROUS_PERMISSION_COMBINATION-1",
+      "find_sec_bugs_kotlin.DANGEROUS_PERMISSION_COMBINATION-1"
+    ],
+    "find_sec_bugs.DEFAULT_HTTP_CLIENT": [
+      "find_sec_bugs_scala.DEFAULT_HTTP_CLIENT-1"
+    ],
+    "find_sec_bugs.DES_USAGE": [
+      "find_sec_bugs_scala.DES_USAGE-1"
+    ],
+    "find_sec_bugs.DES_USAGE-1": [
+      "find_sec_bugs.DES_USAGE-1",
+      "find_sec_bugs_kotlin.DES_USAGE-1"
+    ],
+    "find_sec_bugs.DMI_CONSTANT_DB_PASSWORD-1.HARD_CODE_PASSWORD-3": [
+      "find_sec_bugs.DMI_CONSTANT_DB_PASSWORD-1.HARD_CODE_PASSWORD-3",
+      "find_sec_bugs_kotlin.DMI_CONSTANT_DB_PASSWORD-1.HARD_CODE_PASSWORD-3",
+      "find_sec_bugs_scala.DMI_CONSTANT_DB_PASSWORD-1.HARD_CODE_PASSWORD-3"
+    ],
+    "find_sec_bugs.DMI_EMPTY_DB_PASSWORD-1.HARD_CODE_PASSWORD-2": [
+      "find_sec_bugs.DMI_EMPTY_DB_PASSWORD-1.HARD_CODE_PASSWORD-2",
+      "find_sec_bugs_kotlin.DMI_EMPTY_DB_PASSWORD-1.HARD_CODE_PASSWORD-2",
+      "find_sec_bugs_scala.DMI_EMPTY_DB_PASSWORD-1.HARD_CODE_PASSWORD-2"
+    ],
+    "find_sec_bugs.ECB_MODE": [
+      "find_sec_bugs_scala.ECB_MODE-1"
+    ],
+    "find_sec_bugs.ECB_MODE-1": [
+      "find_sec_bugs.ECB_MODE-1",
+      "find_sec_bugs_kotlin.ECB_MODE-1"
+    ],
+    "find_sec_bugs.EL_INJECTION": [
+      "find_sec_bugs_scala.EL_INJECTION-1"
+    ],
+    "find_sec_bugs.EL_INJECTION-1": [
+      "find_sec_bugs.EL_INJECTION-1",
+      "find_sec_bugs_kotlin.EL_INJECTION-1"
+    ],
+    "find_sec_bugs.EXTERNAL_CONFIG_CONTROL": [
+      "find_sec_bugs_scala.EXTERNAL_CONFIG_CONTROL-1"
+    ],
+    "find_sec_bugs.EXTERNAL_CONFIG_CONTROL-1": [
+      "find_sec_bugs.EXTERNAL_CONFIG_CONTROL-1",
+      "find_sec_bugs_kotlin.EXTERNAL_CONFIG_CONTROL-1"
+    ],
+    "find_sec_bugs.FILE_UPLOAD_FILENAME": [
+      "find_sec_bugs_scala.FILE_UPLOAD_FILENAME-1"
+    ],
+    "find_sec_bugs.FILE_UPLOAD_FILENAME-1": [
+      "find_sec_bugs.FILE_UPLOAD_FILENAME-1",
+      "find_sec_bugs_kotlin.FILE_UPLOAD_FILENAME-1"
+    ],
+    "find_sec_bugs.FORMAT_STRING_MANIPULATION": [
+      "find_sec_bugs_scala.FORMAT_STRING_MANIPULATION-1"
+    ],
+    "find_sec_bugs.FORMAT_STRING_MANIPULATION-1": [
+      "find_sec_bugs.FORMAT_STRING_MANIPULATION-1",
+      "find_sec_bugs_kotlin.FORMAT_STRING_MANIPULATION-1"
+    ],
+    "find_sec_bugs.HARD_CODE_PASSWORD": [
+      "find_sec_bugs_scala.HARD_CODE_PASSWORD-1"
+    ],
+    "find_sec_bugs.HARD_CODE_PASSWORD-1": [
+      "find_sec_bugs.HARD_CODE_PASSWORD-1",
+      "find_sec_bugs_kotlin.HARD_CODE_PASSWORD-1"
+    ],
+    "find_sec_bugs.HAZELCAST_SYMMETRIC_ENCRYPTION": [
+      "find_sec_bugs_scala.HAZELCAST_SYMMETRIC_ENCRYPTION-1"
+    ],
+    "find_sec_bugs.HAZELCAST_SYMMETRIC_ENCRYPTION-1": [
+      "find_sec_bugs.HAZELCAST_SYMMETRIC_ENCRYPTION-1",
+      "find_sec_bugs_kotlin.HAZELCAST_SYMMETRIC_ENCRYPTION-1"
+    ],
+    "find_sec_bugs.HRS_REQUEST_PARAMETER_TO_COOKIE": [
+      "find_sec_bugs_scala.HRS_REQUEST_PARAMETER_TO_COOKIE-1"
+    ],
+    "find_sec_bugs.HRS_REQUEST_PARAMETER_TO_HTTP_HEADER": [
+      "find_sec_bugs_scala.HRS_REQUEST_PARAMETER_TO_HTTP_HEADER-1"
+    ],
+    "find_sec_bugs.HRS_REQUEST_PARAMETER_TO_HTTP_HEADER-1": [
+      "find_sec_bugs.HRS_REQUEST_PARAMETER_TO_HTTP_HEADER-1",
+      "find_sec_bugs_kotlin.HRS_REQUEST_PARAMETER_TO_HTTP_HEADER-1"
+    ],
+    "find_sec_bugs.HTTP_PARAMETER_POLLUTION": [
+      "find_sec_bugs_scala.HTTP_PARAMETER_POLLUTION-1"
+    ],
+    "find_sec_bugs.HTTP_PARAMETER_POLLUTION-1": [
+      "find_sec_bugs.HTTP_PARAMETER_POLLUTION-1",
+      "find_sec_bugs_kotlin.HTTP_PARAMETER_POLLUTION-1"
+    ],
+    "find_sec_bugs.HTTP_RESPONSE_SPLITTING": [
+      "find_sec_bugs_scala.HTTP_RESPONSE_SPLITTING-1"
+    ],
+    "find_sec_bugs.HTTP_RESPONSE_SPLITTING-1": [
+      "find_sec_bugs.HTTP_RESPONSE_SPLITTING-1",
+      "find_sec_bugs_kotlin.HTTP_RESPONSE_SPLITTING-1"
+    ],
+    "find_sec_bugs.HTTPONLY_COOKIE": [
+      "find_sec_bugs_scala.HTTPONLY_COOKIE-1"
+    ],
+    "find_sec_bugs.HTTPONLY_COOKIE-1": [
+      "find_sec_bugs_kotlin.HTTPONLY_COOKIE-1"
+    ],
+    "find_sec_bugs.IMPROPER_UNICODE": [
+      "find_sec_bugs_scala.IMPROPER_UNICODE-1"
+    ],
+    "find_sec_bugs.INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE": [
+      "find_sec_bugs_scala.INFORMATION_EXPOSURE_THROUGH_AN_ERROR_MESSAGE-1"
+    ],
+    "find_sec_bugs.INSECURE_COOKIE": [
+      "find_sec_bugs_scala.INSECURE_COOKIE-1"
+    ],
+    "find_sec_bugs.INSECURE_COOKIE-1": [
+      "find_sec_bugs.INSECURE_COOKIE-1",
+      "find_sec_bugs_kotlin.INSECURE_COOKIE-1"
+    ],
+    "find_sec_bugs.INSECURE_SMTP_SSL": [
+      "find_sec_bugs_scala.INSECURE_SMTP_SSL-1"
+    ],
+    "find_sec_bugs.INSECURE_SMTP_SSL-1": [
+      "find_sec_bugs.INSECURE_SMTP_SSL-1",
+      "find_sec_bugs_kotlin.INSECURE_SMTP_SSL-1"
+    ],
+    "find_sec_bugs.JAXRS_ENDPOINT": [
+      "find_sec_bugs_scala.JAXRS_ENDPOINT-1"
+    ],
+    "find_sec_bugs.JAXWS_ENDPOINT": [
+      "find_sec_bugs_scala.JAXWS_ENDPOINT-1"
+    ],
+    "find_sec_bugs.LDAP_ANONYMOUS": [
+      "find_sec_bugs_scala.LDAP_ANONYMOUS-1"
+    ],
+    "find_sec_bugs.LDAP_ANONYMOUS-1": [
+      "find_sec_bugs.LDAP_ANONYMOUS-1",
+      "find_sec_bugs_kotlin.LDAP_ANONYMOUS-1"
+    ],
+    "find_sec_bugs.LDAP_ENTRY_POISONING": [
+      "find_sec_bugs_scala.LDAP_ENTRY_POISONING-1"
+    ],
+    "find_sec_bugs.LDAP_INJECTION": [
+      "find_sec_bugs_scala.LDAP_INJECTION-1"
+    ],
+    "find_sec_bugs.LDAP_INJECTION-1": [
+      "find_sec_bugs.LDAP_INJECTION-1",
+      "find_sec_bugs_kotlin.LDAP_INJECTION-1"
+    ],
+    "find_sec_bugs.MALICIOUS_XSLT": [
+      "find_sec_bugs_scala.MALICIOUS_XSLT-1"
+    ],
+    "find_sec_bugs.MALICIOUS_XSLT-1": [
+      "find_sec_bugs.MALICIOUS_XSLT-1",
+      "find_sec_bugs_kotlin.MALICIOUS_XSLT-1"
+    ],
+    "find_sec_bugs.MODIFICATION_AFTER_VALIDATION": [
+      "find_sec_bugs_scala.MODIFICATION_AFTER_VALIDATION-1"
+    ],
+    "find_sec_bugs.MODIFICATION_AFTER_VALIDATION-1": [
+      "find_sec_bugs.MODIFICATION_AFTER_VALIDATION-1",
+      "find_sec_bugs_kotlin.MODIFICATION_AFTER_VALIDATION-1"
+    ],
+    "find_sec_bugs.NORMALIZATION_AFTER_VALIDATION": [
+      "find_sec_bugs_scala.NORMALIZATION_AFTER_VALIDATION-1"
+    ],
+    "find_sec_bugs.NORMALIZATION_AFTER_VALIDATION-1": [
+      "find_sec_bugs.NORMALIZATION_AFTER_VALIDATION-1",
+      "find_sec_bugs_kotlin.NORMALIZATION_AFTER_VALIDATION-1"
+    ],
+    "find_sec_bugs.NULL_CIPHER": [
+      "find_sec_bugs_scala.NULL_CIPHER-1"
+    ],
+    "find_sec_bugs.NULL_CIPHER-1": [
+      "find_sec_bugs.NULL_CIPHER-1",
+      "find_sec_bugs_kotlin.NULL_CIPHER-1"
+    ],
+    "find_sec_bugs.OGNL_INJECTION": [
+      "find_sec_bugs_scala.OGNL_INJECTION-1"
+    ],
+    "find_sec_bugs.OGNL_INJECTION-1": [
+      "find_sec_bugs.OGNL_INJECTION-1",
+      "find_sec_bugs_kotlin.OGNL_INJECTION-1"
+    ],
+    "find_sec_bugs.OVERLY_PERMISSIVE_FILE_PERMISSION": [
+      "find_sec_bugs_scala.OVERLY_PERMISSIVE_FILE_PERMISSION-1"
+    ],
+    "find_sec_bugs.OVERLY_PERMISSIVE_FILE_PERMISSION-1": [
+      "find_sec_bugs.OVERLY_PERMISSIVE_FILE_PERMISSION-1",
+      "find_sec_bugs_kotlin.OVERLY_PERMISSIVE_FILE_PERMISSION-1"
+    ],
+    "find_sec_bugs.OVERLY_PERMISSIVE_FILE_PERMISSION-2": [
+      "find_sec_bugs_scala.OVERLY_PERMISSIVE_FILE_PERMISSION-2"
+    ],
+    "find_sec_bugs.PADDING_ORACLE": [
+      "find_sec_bugs_scala.PADDING_ORACLE-1"
+    ],
+    "find_sec_bugs.PADDING_ORACLE-1": [
+      "find_sec_bugs.PADDING_ORACLE-1",
+      "find_sec_bugs_kotlin.PADDING_ORACLE-1"
+    ],
+    "find_sec_bugs.PATH_TRAVERSAL_IN-1.SCALA_PATH_TRAVERSAL_IN-1": [
+      "find_sec_bugs_scala.PATH_TRAVERSAL_IN-1.SCALA_PATH_TRAVERSAL_IN-1"
+    ],
+    "find_sec_bugs.PATH_TRAVERSAL_OUT": [
+      "find_sec_bugs_scala.PATH_TRAVERSAL_OUT-1"
+    ],
+    "find_sec_bugs.PERMISSIVE_CORS": [
+      "find_sec_bugs_scala.PERMISSIVE_CORS-1"
+    ],
+    "find_sec_bugs.PERMISSIVE_CORS-2": [
+      "find_sec_bugs.PERMISSIVE_CORS-2",
+      "find_sec_bugs_kotlin.PERMISSIVE_CORS-2",
+      "find_sec_bugs_scala.PERMISSIVE_CORS-2"
+    ],
+    "find_sec_bugs.PT_ABSOLUTE_PATH_TRAVERSAL": [
+      "find_sec_bugs_scala.PT_ABSOLUTE_PATH_TRAVERSAL-1"
+    ],
+    "find_sec_bugs.PT_ABSOLUTE_PATH_TRAVERSAL-1": [
+      "find_sec_bugs.PT_ABSOLUTE_PATH_TRAVERSAL-1",
+      "find_sec_bugs_kotlin.PT_ABSOLUTE_PATH_TRAVERSAL-1"
+    ],
+    "find_sec_bugs.PT_RELATIVE_PATH_TRAVERSAL": [
+      "find_sec_bugs_scala.PT_RELATIVE_PATH_TRAVERSAL-1"
+    ],
+    "find_sec_bugs.REQUESTDISPATCHER_FILE_DISCLOSURE-1.STRUTS_FILE_DISCLOSURE-1.SPRING_FILE_DISCLOSURE-1": [
+      "find_sec_bugs_kotlin.REQUESTDISPATCHER_FILE_DISCLOSURE-1.STRUTS_FILE_DISCLOSURE-1.SPRING_FILE_DISCLOSURE-1",
+      "find_sec_bugs_scala.REQUESTDISPATCHER_FILE_DISCLOSURE-1.STRUTS_FILE_DISCLOSURE-1.SPRING_FILE_DISCLOSURE-1"
+    ],
+    "find_sec_bugs.RPC_ENABLED_EXTENSIONS": [
+      "find_sec_bugs_scala.RPC_ENABLED_EXTENSIONS-1"
+    ],
+    "find_sec_bugs.RSA_KEY_SIZE": [
+      "find_sec_bugs_scala.RSA_KEY_SIZE-1"
+    ],
+    "find_sec_bugs.RSA_KEY_SIZE-1": [
+      "find_sec_bugs.RSA_KEY_SIZE-1",
+      "find_sec_bugs_kotlin.RSA_KEY_SIZE-1"
+    ],
+    "find_sec_bugs.RSA_NO_PADDING": [
+      "find_sec_bugs_scala.RSA_NO_PADDING-1"
+    ],
+    "find_sec_bugs.RSA_NO_PADDING-1": [
+      "find_sec_bugs.RSA_NO_PADDING-1",
+      "find_sec_bugs_kotlin.RSA_NO_PADDING-1"
+    ],
+    "find_sec_bugs.SAML_IGNORE_COMMENTS": [
+      "find_sec_bugs_scala.SAML_IGNORE_COMMENTS-1"
+    ],
+    "find_sec_bugs.SAML_IGNORE_COMMENTS-1": [
+      "find_sec_bugs.SAML_IGNORE_COMMENTS-1",
+      "find_sec_bugs_kotlin.SAML_IGNORE_COMMENTS-1"
+    ],
+    "find_sec_bugs.SCALA_PLAY_SSRF": [
+      "find_sec_bugs_scala.SCALA_PLAY_SSRF-1"
+    ],
+    "find_sec_bugs.SCALA_SENSITIVE_DATA_EXPOSURE": [
+      "find_sec_bugs_scala.SCALA_SENSITIVE_DATA_EXPOSURE-1"
+    ],
+    "find_sec_bugs.SCALA_XSS_MVC_API": [
+      "find_sec_bugs_scala.SCALA_XSS_MVC_API-1"
+    ],
+    "find_sec_bugs.SCRIPT_ENGINE_INJECTION-1.SPEL_INJECTION-1.EL_INJECTION-2.SEAM_LOG_INJECTION-1": [
+      "find_sec_bugs.SCRIPT_ENGINE_INJECTION-1.SPEL_INJECTION-1.EL_INJECTION-2.SEAM_LOG_INJECTION-1",
+      "find_sec_bugs_kotlin.SCRIPT_ENGINE_INJECTION-1.SPEL_INJECTION-1.EL_INJECTION-2.SEAM_LOG_INJECTION-1",
+      "find_sec_bugs_scala.SCRIPT_ENGINE_INJECTION-1.SPEL_INJECTION-1.EL_INJECTION-2.SEAM_LOG_INJECTION-1"
+    ],
+    "find_sec_bugs.SCRIPT_ENGINE_INJECTION-2": [
+      "find_sec_bugs.SCRIPT_ENGINE_INJECTION-2",
+      "find_sec_bugs_scala.SCRIPT_ENGINE_INJECTION-2"
+    ],
+    "find_sec_bugs.SMTP_HEADER_INJECTION": [
+      "find_sec_bugs_scala.SMTP_HEADER_INJECTION-1"
+    ],
+    "find_sec_bugs.SMTP_HEADER_INJECTION-1": [
+      "find_sec_bugs.SMTP_HEADER_INJECTION-1",
+      "find_sec_bugs_kotlin.SMTP_HEADER_INJECTION-1"
+    ],
+    "find_sec_bugs.SPRING_CSRF_PROTECTION_DISABLED-1": [
+      "find_sec_bugs_kotlin.SPRING_CSRF_PROTECTION_DISABLED-1"
+    ],
+    "find_sec_bugs.SQL_INJECTION_SPRING_JDBC-1.SQL_INJECTION_JPA-1.SQL_INJECTION_JDO-1.SQL_INJECTION_JDBC-1.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1.SCALA_SQL_INJECTION_SLICK-1": [
+      "find_sec_bugs_scala.SQL_INJECTION_SPRING_JDBC-1.SQL_INJECTION_JPA-1.SQL_INJECTION_JDO-1.SQL_INJECTION_JDBC-1.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1.SCALA_SQL_INJECTION_SLICK-1"
+    ],
+    "find_sec_bugs.SQL_INJECTION_SPRING_JDBC-1.SQL_INJECTION_JPA-1.SQL_INJECTION_JDO-1.SQL_INJECTION_JDBC-1.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1.SQL_INJECTION-1.SQL_INJECTION_HIBERNATE-1.SQL_INJECTION_VERTX-1.SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING-1": [
+      "find_sec_bugs_kotlin.SQL_INJECTION_SPRING_JDBC-1.SQL_INJECTION_JPA-1.SQL_INJECTION_JDO-1.SQL_INJECTION_JDBC-1.SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE-1.SQL_INJECTION-1.SQL_INJECTION_HIBERNATE-1.SQL_INJECTION_VERTX-1.SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING-1"
+    ],
+    "find_sec_bugs.SSL_CONTEXT": [
+      "find_sec_bugs_scala.SSL_CONTEXT-1"
+    ],
+    "find_sec_bugs.SSL_CONTEXT-1": [
+      "find_sec_bugs.SSL_CONTEXT-1",
+      "find_sec_bugs_kotlin.SSL_CONTEXT-1"
+    ],
+    "find_sec_bugs.SSL_CONTEXT-2": [
+      "find_sec_bugs.SSL_CONTEXT-2",
+      "find_sec_bugs_kotlin.SSL_CONTEXT-2"
+    ],
+    "find_sec_bugs.STRUTS_FORM_VALIDATION": [
+      "find_sec_bugs_scala.STRUTS_FORM_VALIDATION-1"
+    ],
+    "find_sec_bugs.TDES_USAGE": [
+      "find_sec_bugs_scala.TDES_USAGE-1"
+    ],
+    "find_sec_bugs.TDES_USAGE-1": [
+      "find_sec_bugs.TDES_USAGE-1",
+      "find_sec_bugs_kotlin.TDES_USAGE-1"
+    ],
+    "find_sec_bugs.TEMPLATE_INJECTION_PEBBLE-1.TEMPLATE_INJECTION_FREEMARKER-1.TEMPLATE_INJECTION_VELOCITY-1": [
+      "find_sec_bugs.TEMPLATE_INJECTION_PEBBLE-1.TEMPLATE_INJECTION_FREEMARKER-1.TEMPLATE_INJECTION_VELOCITY-1",
+      "find_sec_bugs_kotlin.TEMPLATE_INJECTION_PEBBLE-1.TEMPLATE_INJECTION_FREEMARKER-1.TEMPLATE_INJECTION_VELOCITY-1",
+      "find_sec_bugs_scala.TEMPLATE_INJECTION_PEBBLE-1.TEMPLATE_INJECTION_FREEMARKER-1.TEMPLATE_INJECTION_VELOCITY-1"
+    ],
+    "find_sec_bugs.TRUST_BOUNDARY_VIOLATION": [
+      "find_sec_bugs_scala.TRUST_BOUNDARY_VIOLATION-1"
+    ],
+    "find_sec_bugs.UNENCRYPTED_SOCKET-1.UNENCRYPTED_SERVER_SOCKET-1": [
+      "find_sec_bugs_scala.UNENCRYPTED_SOCKET-1.UNENCRYPTED_SERVER_SOCKET-1"
+    ],
+    "find_sec_bugs.UNVALIDATED_REDIRECT-1.URL_REWRITING-1": [
+      "find_sec_bugs.UNVALIDATED_REDIRECT-1.URL_REWRITING-1",
+      "find_sec_bugs_kotlin.UNVALIDATED_REDIRECT-1.URL_REWRITING-1",
+      "find_sec_bugs_scala.UNVALIDATED_REDIRECT-1.URL_REWRITING-1"
+    ],
+    "find_sec_bugs.URLCONNECTION_SSRF_FD": [
+      "find_sec_bugs_scala.URLCONNECTION_SSRF_FD-1"
+    ],
+    "find_sec_bugs.URLCONNECTION_SSRF_FD-1": [
+      "find_sec_bugs.URLCONNECTION_SSRF_FD-1",
+      "find_sec_bugs_kotlin.URLCONNECTION_SSRF_FD-1"
+    ],
+    "find_sec_bugs.WEAK_FILENAMEUTILS": [
+      "find_sec_bugs_scala.WEAK_FILENAMEUTILS-1"
+    ],
+    "find_sec_bugs.WEAK_FILENAMEUTILS-1": [
+      "find_sec_bugs.WEAK_FILENAMEUTILS-1",
+      "find_sec_bugs_kotlin.WEAK_FILENAMEUTILS-1"
+    ],
+    "find_sec_bugs.WEAK_HOSTNAME_VERIFIER-1.WEAK_TRUST_MANAGER-1": [
+      "find_sec_bugs_kotlin.WEAK_HOSTNAME_VERIFIER-1.WEAK_TRUST_MANAGER-1",
+      "find_sec_bugs_scala.WEAK_HOSTNAME_VERIFIER-1.WEAK_TRUST_MANAGER-1"
+    ],
+    "find_sec_bugs.WEAK_MESSAGE_DIGEST_MD5-1.WEAK_MESSAGE_DIGEST_SHA1-1": [
+      "find_sec_bugs.WEAK_MESSAGE_DIGEST_MD5-1.WEAK_MESSAGE_DIGEST_SHA1-1",
+      "find_sec_bugs_kotlin.WEAK_MESSAGE_DIGEST_MD5-1.WEAK_MESSAGE_DIGEST_SHA1-1",
+      "find_sec_bugs_scala.WEAK_MESSAGE_DIGEST_MD5-1.WEAK_MESSAGE_DIGEST_SHA1-1"
+    ],
+    "find_sec_bugs.WICKET_XSS1": [
+      "find_sec_bugs_scala.WICKET_XSS1-1"
+    ],
+    "find_sec_bugs.WICKET_XSS1-1": [
+      "find_sec_bugs.WICKET_XSS1-1",
+      "find_sec_bugs_kotlin.WICKET_XSS1-1"
+    ],
+    "find_sec_bugs.XML_DECODER": [
+      "find_sec_bugs_scala.XML_DECODER-1"
+    ],
+    "find_sec_bugs.XML_DECODER-1": [
+      "find_sec_bugs.XML_DECODER-1",
+      "find_sec_bugs_kotlin.XML_DECODER-1"
+    ],
+    "find_sec_bugs.XPATH_INJECTION": [
+      "find_sec_bugs_scala.XPATH_INJECTION-1"
+    ],
+    "find_sec_bugs.XPATH_INJECTION-1": [
+      "find_sec_bugs_kotlin.XPATH_INJECTION-1"
+    ],
+    "find_sec_bugs.XSS_REQUEST_PARAMETER_TO_SERVLET_WRITER": [
+      "find_sec_bugs_scala.XSS_REQUEST_PARAMETER_TO_SERVLET_WRITER-1"
+    ],
+    "find_sec_bugs.XSS_REQUEST_PARAMETER_TO_SERVLET_WRITER-1": [
+      "find_sec_bugs.XSS_REQUEST_PARAMETER_TO_SERVLET_WRITER-1",
+      "find_sec_bugs_kotlin.XSS_REQUEST_PARAMETER_TO_SERVLET_WRITER-1"
+    ],
+    "find_sec_bugs.XSS_REQUEST_WRAPPER": [
+      "find_sec_bugs_scala.XSS_REQUEST_WRAPPER-1"
+    ],
+    "find_sec_bugs.XSS_SERVLET": [
+      "find_sec_bugs_scala.XSS_SERVLET-1"
+    ],
+    "find_sec_bugs.XXE_DOCUMENT": [
+      "find_sec_bugs_scala.XXE_DOCUMENT-1"
+    ],
+    "find_sec_bugs.XXE_DTD_TRANSFORM_FACTORY-1.XXE_XSLT_TRANSFORM_FACTORY-1": [
+      "find_sec_bugs_scala.XXE_DTD_TRANSFORM_FACTORY-1.XXE_XSLT_TRANSFORM_FACTORY-1"
+    ],
+    "find_sec_bugs.XXE_SAXPARSER": [
+      "find_sec_bugs_scala.XXE_SAXPARSER-1"
+    ],
+    "find_sec_bugs.XXE_SAXPARSER-1": [
+      "find_sec_bugs_kotlin.XXE_SAXPARSER-1"
+    ],
+    "find_sec_bugs.XXE_XMLREADER": [
+      "find_sec_bugs_scala.XXE_XMLREADER-1"
+    ],
+    "find_sec_bugs.XXE_XMLREADER-1": [
+      "find_sec_bugs.XXE_XMLREADER-1",
+      "find_sec_bugs_kotlin.XXE_XMLREADER-1"
+    ],
+    "find_sec_bugs.XXE_XMLSTREAMREADER": [
+      "find_sec_bugs_scala.XXE_XMLSTREAMREADER-1"
+    ],
+    "find_sec_bugs.XXE_XMLSTREAMREADER-1": [
+      "find_sec_bugs_kotlin.XXE_XMLSTREAMREADER-1"
+    ],
+    "find_sec_bugs.XXE_XPATH": [
+      "find_sec_bugs_scala.XXE_XPATH-1"
+    ],
+    "PHPCS_SecurityAudit.BadFunctions.Asserts.WarnFunctionHandling": [
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.Asserts.WarnFunctionHandling"
+    ],
+    "PHPCS_SecurityAudit.BadFunctions.Backticks.WarnSystemExec": [
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.Backticks.WarnSystemExec"
+    ],
+    "PHPCS_SecurityAudit.BadFunctions.CryptoFunctions.WarnCryptoFunc": [
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.CryptoFunctions.WarnCryptoFunc-Mcrypt",
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.CryptoFunctions.WarnCryptoFunc-WeakCrypto"
+    ],
+    "PHPCS_SecurityAudit.BadFunctions.FilesystemFunctions.WarnFilesystem": [
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.FilesystemFunctions.WarnFilesystem"
+    ],
+    "PHPCS_SecurityAudit.BadFunctions.FringeFunctions.WarnFringestuff": [
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.FringeFunctions.WarnFringestuff"
+    ],
+    "PHPCS_SecurityAudit.BadFunctions.NoEvals.NoEvals": [
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.NoEvals.NoEvals"
+    ],
+    "PHPCS_SecurityAudit.BadFunctions.Phpinfos.WarnPhpinfo": [
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.Phpinfos.WarnPhpinfo"
+    ],
+    "PHPCS_SecurityAudit.BadFunctions.SystemExecFunctions.WarnSystemExec": [
+      "phpcs_security_audit.PHPCS_SecurityAudit.BadFunctions.SystemExecFunctions.WarnSystemExec"
+    ]
+  }
+}

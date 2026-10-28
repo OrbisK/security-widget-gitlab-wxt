@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { suppressionFor } from '@/lib/suppress';
 import { SEVERITY_LABELS, type Finding, type FindingStatus } from '@/lib/types';
 
 const props = defineProps<{
@@ -39,6 +40,46 @@ const location = computed(() => {
   if (file) return startLine ? `${file}:${startLine}` : file;
   return dependency ?? locationLabel;
 });
+
+const suppression = computed(() => suppressionFor(props.finding));
+
+/** What the copy button puts on the clipboard, labels itself and explains. */
+const copy = computed(() => {
+  const value = suppression.value;
+  if (!value) return null;
+  if (value.kind === 'rule-id') {
+    return {
+      text: value.ruleId,
+      label: 'copy rule id',
+      title: `Copy "${value.ruleId}" — this file takes no comment we know how to write, so ignore the rule in the scanner's own configuration.`,
+    };
+  }
+  const where = {
+    'same-line': 'at the end of the reported line',
+    'line-above': 'on its own line above the reported line',
+    'file-start': 'among the comments that open the file, before any code',
+  }[value.placement];
+  return {
+    text: value.comment,
+    label: 'copy ignore comment',
+    title: `Copy "${value.comment}" — paste it ${where}. Silences ${value.scope}.`,
+  };
+});
+
+const copyState = ref<'idle' | 'copied' | 'failed'>('idle');
+let copyReset: ReturnType<typeof setTimeout> | undefined;
+
+async function copySuppression() {
+  if (!copy.value) return;
+  try {
+    await navigator.clipboard.writeText(copy.value.text);
+    copyState.value = 'copied';
+  } catch {
+    copyState.value = 'failed';
+  }
+  clearTimeout(copyReset);
+  copyReset = setTimeout(() => (copyState.value = 'idle'), 1500);
+}
 
 const hasDetail = computed(() =>
   Boolean(
@@ -84,6 +125,23 @@ const hasDetail = computed(() =>
           <a v-if="finding.blobUrl" :href="finding.blobUrl" class="glsw-link">{{ location }}</a>
           <span v-else>{{ location }}</span>
           <span v-if="finding.scanner" class="glsw-muted"> · {{ finding.scanner }}</span>
+          <template v-if="copy">
+            <span class="glsw-muted"> · </span>
+            <button
+              type="button"
+              class="glsw-linkish glsw-copy"
+              :title="copy.title"
+              @click="copySuppression"
+            >
+              {{
+                copyState === 'copied'
+                  ? 'copied'
+                  : copyState === 'failed'
+                    ? 'copy failed'
+                    : copy.label
+              }}
+            </button>
+          </template>
         </div>
       </div>
     </div>

@@ -15,7 +15,8 @@
     "compile": "vue-tsc --noEmit",
     "postinstall": "wxt prepare",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "generate:semgrep-rule-ids": "node scripts/generate-semgrep-rule-ids.ts"
   },
   "dependencies": {
     "vue": "^3.5.29"
@@ -29,6 +30,7 @@
     "vitest": "^4.1.10",
     "vue-tsc": "^3.2.5",
     "web-ext": "^10.5.0",
-    "wxt": "^0.20.27"
+    "wxt": "^0.20.27",
+    "yaml": "^2.9.1"
   }
 }
