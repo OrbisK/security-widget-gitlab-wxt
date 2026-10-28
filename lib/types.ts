@@ -214,6 +214,11 @@ export interface PipelineProgress {
   awaitingDownstream: boolean;
 }
 
+/** True while some of the pipeline's reports may still be on their way. */
+export function isRunning(progress: PipelineProgress): boolean {
+  return progress.unfinishedJobs.length > 0 || progress.awaitingDownstream;
+}
+
 /**
  * The comparison is fetched after the head reports are already on screen, so it
  * has its own lifecycle. `off` means the user turned it off; `unavailable`

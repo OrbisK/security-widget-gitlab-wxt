@@ -8,14 +8,35 @@ import { fitHost, waitForAnchor } from '@/lib/anchor';
 import { bail, error as logError, log, setVerbose } from '@/lib/debug';
 import type { MrInfo } from '@/lib/gitlab-api';
 import { looksLikeGitLab, parseMrPath, type MrPageContext } from '@/lib/gitlab-page';
-import { discoverReports, loadComparison, loadReports } from '@/lib/scan';
+import {
+  clearBaseReportCache,
+  discoverReports,
+  discoveryChanged,
+  loadComparison,
+  loadReports,
+  rediscoverReports,
+  type Discovery,
+  type ReportCache,
+} from '@/lib/scan';
 import { getSettings, settings, withDefaults, type Settings } from '@/lib/storage';
-import type { WidgetState } from '@/lib/types';
+import { isRunning, type WidgetState } from '@/lib/types';
 import './widget.css';
 
 interface Store {
   state: WidgetState;
   settings: Settings;
+  /** A refresh the user asked for is in flight. */
+  refreshing: boolean;
+}
+
+/**
+ * How long until an open merge request is checked for changes again. A running
+ * pipeline is worth watching closely, since its scan jobs finish one by one; a
+ * finished one only changes when a push starts another, so it is checked half
+ * as often.
+ */
+function pollDelay(settings: Settings, running: boolean): number {
+  return settings.refreshIntervalSeconds * 1000 * (running ? 1 : 2);
 }
 
 /** One merge request's worth of work, so a soft navigation can cancel it. */
@@ -26,7 +47,18 @@ interface Session {
   ui: IntegratedContentScriptUi<App<Element>> | null;
   /** Set once the reports are in, so the comparison can start or be retried. */
   info: MrInfo | null;
+  /** What the rendered reports were read from, for a refresh to compare against. */
+  discovery: Discovery | null;
+  reportCache: ReportCache;
+  /**
+   * Bumped whenever the rendered reports are replaced, so a comparison that was
+   * started against the old ones knows not to land on the new.
+   */
+  generation: number;
   comparing: boolean;
+  /** A refresh replaced the reports while a comparison was in flight. */
+  compareAgain: boolean;
+  refreshing: boolean;
 }
 
 export default defineContentScript({
@@ -80,10 +112,16 @@ export default defineContentScript({
         store: reactive<Store>({
           state: { status: 'loading', reportTypes: [] },
           settings: await getSettings(),
+          refreshing: false,
         }) as Store,
         ui: null,
         info: null,
+        discovery: null,
+        reportCache: new Map(),
+        generation: 0,
         comparing: false,
+        compareAgain: false,
+        refreshing: false,
       };
       session = active;
 
@@ -152,12 +190,33 @@ async function run(
   if (outcome.status === 'error') {
     logError(outcome.message);
     session.store.state = { status: 'error', message: outcome.message };
-    session.ui = await mountWidget(ctx, signal, session.store);
+    session.ui = await mountWidget(ctx, signal, session);
     return;
   }
 
-  const { discovery } = outcome;
+  let { discovery } = outcome;
+
+  // A pipeline that has only just started has uploaded no reports yet, which is
+  // not the same as having no security scanning. Wait, invisibly, for the first
+  // report or for the pipeline to finish before deciding which it is.
+  while (
+    discovery.sources.length === 0 &&
+    isRunning(discovery.progress) &&
+    session.store.settings.autoRefresh
+  ) {
+    await new Promise<void>((resolve) =>
+      ctx.setTimeout(resolve, pollDelay(session.store.settings, true)),
+    );
+    if (signal.aborted || ctx.isInvalid) return;
+    if (document.visibilityState !== 'visible') continue;
+
+    const next = await discoverReports(page, session.store.settings);
+    if (signal.aborted) return;
+    if (next.status === 'found') discovery = next.discovery;
+  }
+
   session.info = discovery.info;
+  session.discovery = discovery;
 
   // Stay invisible on merge requests that simply have no security scanning.
   if (discovery.sources.length === 0) {
@@ -172,11 +231,15 @@ async function run(
     status: 'loading',
     reportTypes: discovery.sources.map((source) => source.reportType),
   };
-  session.ui = await mountWidget(ctx, signal, session.store);
+  session.ui = await mountWidget(ctx, signal, session);
   if (!session.ui) return;
 
+  // From here on the widget is on screen, so keep it current — including when
+  // the download below fails, which a later attempt may well get past.
+  schedulePoll(ctx, session);
+
   try {
-    const result = await loadReports(page, discovery);
+    const result = await loadReports(page, discovery, session.reportCache);
     if (signal.aborted) return;
 
     log(`rendered ${result.findings.length} finding(s)`, result.counts);
@@ -205,6 +268,89 @@ async function run(
   void compare(session);
 }
 
+function schedulePoll(ctx: ContentScriptContext, session: Session): void {
+  if (session.abort.signal.aborted || !session.discovery) return;
+  const delay = pollDelay(session.store.settings, isRunning(session.discovery.progress));
+  ctx.setTimeout(() => void poll(ctx, session), delay);
+}
+
+/**
+ * Keeps ticking with automatic updates turned off, doing nothing, so that
+ * turning them back on in the options takes effect without a reload.
+ */
+async function poll(ctx: ContentScriptContext, session: Session): Promise<void> {
+  if (session.abort.signal.aborted || ctx.isInvalid) return;
+  // Nobody is looking at a background tab; it catches up on the next tick
+  // after it is shown again.
+  if (session.store.settings.autoRefresh && document.visibilityState === 'visible') {
+    await refresh(session, { manual: false });
+  }
+  schedulePoll(ctx, session);
+}
+
+/**
+ * Re-reads the merge request and re-renders it in place if anything changed: a
+ * scan job finished, or a push started a new pipeline.
+ *
+ * A manual refresh is the user asking to look again, so it skips the shortcut
+ * for a finished pipeline, re-renders even if nothing seems to have changed,
+ * and forgets the cached base reports so the target branch is read afresh too.
+ */
+async function refresh(session: Session, { manual }: { manual: boolean }): Promise<void> {
+  const previous = session.discovery;
+  if (!previous || session.refreshing) return;
+
+  const { signal } = session.abort;
+  session.refreshing = true;
+  session.store.refreshing = manual;
+
+  try {
+    if (manual) clearBaseReportCache();
+    const outcome = manual
+      ? await discoverReports(session.page, session.store.settings)
+      : await rediscoverReports(session.page, session.store.settings, previous);
+    if (signal.aborted) return;
+
+    // A failed check leaves what is on screen alone; the next one may succeed.
+    if (outcome.status !== 'found') {
+      log('refresh skipped:', outcome.status === 'error' ? outcome.message : outcome.reason);
+      return;
+    }
+
+    const { discovery } = outcome;
+    if (!manual && !discoveryChanged(previous, discovery) && session.store.state.status === 'ok') {
+      return;
+    }
+    log(`refreshing pipeline ${discovery.info.pipelineId}`);
+
+    if (discovery.info.pipelineId !== previous.info.pipelineId) session.reportCache.clear();
+    const result = await loadReports(session.page, discovery, session.reportCache);
+    if (signal.aborted) return;
+
+    // The previous comparison stays up until the new one lands, rather than the
+    // line flashing back to "Comparing…" every time a job finishes.
+    const { state } = session.store;
+    const enabled = session.store.settings.compareWithTargetBranch;
+    const comparison =
+      state.status === 'ok' && enabled
+        ? state.result.comparison
+        : ({ status: enabled ? 'loading' : 'off' } as const);
+
+    session.discovery = discovery;
+    session.info = discovery.info;
+    session.generation += 1;
+    session.store.state = { status: 'ok', result: { ...result, comparison } };
+    log(`rendered ${result.findings.length} finding(s)`, result.counts);
+
+    await compare(session, { refresh: true });
+  } catch (cause) {
+    logError('failed to refresh the widget', cause);
+  } finally {
+    session.refreshing = false;
+    session.store.refreshing = false;
+  }
+}
+
 /** Clears the labels when the user turns the comparison off. */
 function dropComparison(session: Session): void {
   const { state } = session.store;
@@ -220,20 +366,35 @@ function dropComparison(session: Session): void {
  * when the user turns the feature on. A previous `unavailable` is retried on that
  * path, since switching the feature back on is a request to try again; the
  * watcher is what keeps unrelated settings changes off it.
+ *
+ * `refresh` is for reports that have just been replaced: a comparison already
+ * on screen is redone in place, and one already in flight is redone once it
+ * returns, since it was started against the reports that are gone.
  */
-async function compare(session: Session): Promise<void> {
+async function compare(session: Session, { refresh = false } = {}): Promise<void> {
   const { state } = session.store;
-  if (session.comparing || !session.info) return;
+  if (session.comparing) {
+    if (refresh) session.compareAgain = true;
+    return;
+  }
+  if (!session.info) return;
   if (!session.store.settings.compareWithTargetBranch) return;
   if (state.status !== 'ok') return;
-  if (state.result.comparison.status === 'ready') return;
+  if (!refresh && state.result.comparison.status === 'ready') return;
 
   session.comparing = true;
+  session.compareAgain = false;
   const { signal } = session.abort;
   const result = state.result;
+  const generation = session.generation;
+  const stale = () => {
+    if (session.generation === generation) return false;
+    session.compareAgain = true;
+    return true;
+  };
 
   try {
-    if (result.comparison.status !== 'loading') {
+    if (result.comparison.status === 'off' || result.comparison.status === 'unavailable') {
       session.store.state = { status: 'ok', result: { ...result, comparison: { status: 'loading' } } };
     }
 
@@ -245,12 +406,13 @@ async function compare(session: Session): Promise<void> {
     );
     // The user may have turned the comparison off while it was in flight.
     if (signal.aborted || !session.store.settings.compareWithTargetBranch) return;
+    if (stale()) return;
 
     if (comparison.status === 'unavailable') log('no comparison:', comparison.reason);
     session.store.state = { status: 'ok', result: { ...result, comparison } };
   } catch (cause) {
     logError('failed to compare with the target branch', cause);
-    if (!signal.aborted) {
+    if (!signal.aborted && !stale()) {
       session.store.state = {
         status: 'ok',
         result: {
@@ -264,14 +426,16 @@ async function compare(session: Session): Promise<void> {
     }
   } finally {
     session.comparing = false;
+    if (session.compareAgain && !signal.aborted) void compare(session, { refresh: true });
   }
 }
 
 async function mountWidget(
   ctx: ContentScriptContext,
   signal: AbortSignal,
-  store: Store,
+  session: Session,
 ): Promise<IntegratedContentScriptUi<App<Element>> | null> {
+  const { store } = session;
   const anchor = await waitForAnchor(signal);
   if (!anchor) {
     bail('found nothing on the page to attach the widget to');
@@ -286,7 +450,14 @@ async function mountWidget(
     onMount(container) {
       // A render function rather than a static props object, so the reactive
       // store drives updates as the reports finish downloading.
-      const app = createApp(() => h(SecurityWidget, { state: store.state, settings: store.settings }));
+      const app = createApp(() =>
+        h(SecurityWidget, {
+          state: store.state,
+          settings: store.settings,
+          refreshing: store.refreshing,
+          onRefresh: () => void refresh(session, { manual: true }),
+        }),
+      );
       app.mount(container);
       return app;
     },

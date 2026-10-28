@@ -51,6 +51,16 @@ export interface Settings {
    * bridges listing plus a jobs listing per child pipeline found.
    */
   childPipelineDepth: number;
+  /**
+   * Keep an open merge request's widget current: pick up scan jobs as they
+   * finish and a new pipeline after a push, without reloading the page.
+   */
+  autoRefresh: boolean;
+  /**
+   * How often a running pipeline is checked, in seconds. A finished one is
+   * checked half as often, since only a push can change it then.
+   */
+  refreshIntervalSeconds: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -64,6 +74,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showSearch: true,
   maxBasePipelines: 3,
   childPipelineDepth: 1,
+  autoRefresh: true,
+  refreshIntervalSeconds: 30,
 };
 
 /**
@@ -81,6 +93,8 @@ export const SETTING_LIMITS = {
    */
   maxBasePipelines: { min: 1, max: 10 },
   childPipelineDepth: { min: 0, max: 3 },
+  /** Each check is at least one request per open merge request tab. */
+  refreshIntervalSeconds: { min: 10, max: 600 },
 } as const satisfies Record<string, { min: number; max: number }>;
 
 export type NumericSetting = keyof typeof SETTING_LIMITS;
@@ -103,6 +117,7 @@ export function withDefaults(value: Partial<Settings> | null | undefined): Setti
     findingsPerPage: clampSetting(merged.findingsPerPage, 'findingsPerPage'),
     maxBasePipelines: clampSetting(merged.maxBasePipelines, 'maxBasePipelines'),
     childPipelineDepth: clampSetting(merged.childPipelineDepth, 'childPipelineDepth'),
+    refreshIntervalSeconds: clampSetting(merged.refreshIntervalSeconds, 'refreshIntervalSeconds'),
   };
 }
 

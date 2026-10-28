@@ -186,6 +186,13 @@ Then, for the target branch comparison:
    tried by default, up to ten from the options page, since each one costs a job listing plus a
    download per report it has.
 
+While the page stays open, the widget keeps itself current, every 30 seconds by default (adjustable,
+or off, in the options page). While the pipeline runs, steps 1–3 are repeated and only the reports
+of jobs that have finished since are downloaded. Once it has finished, only step 1 is repeated, half
+as often, to notice a push that starts a new pipeline. Background tabs are not checked. Findings
+from a job that is still running are never listed as fixed. The refresh button in the widget does
+all of the above at once and also re-reads the target branch.
+
 All requests are same-origin from the content script, which is what makes the `_gitlab_session`
 cookie ride along — a background-worker fetch would be cross-site and unauthenticated. Steps 5
 onwards address the **target** project, which is where the target branch's pipelines live.
@@ -201,7 +208,8 @@ optional host permission and registers the content script for it at runtime.
 
 Request volume per merge request page view is bounded: two widget JSON reads, at most five pages of
 100 jobs per pipeline (plus one level of child pipelines), and one download per report artifact
-found. Reports are fetched once per page load, not polled.
+found. A report is downloaded once per job, and the periodic check described above costs two
+requests per open merge request tab, plus a job listing while the pipeline is still running.
 
 The target branch comparison adds one merge request read, two pipeline listings, and the same jobs
 listing plus per-artifact downloads for the base pipeline it settles on — at most three candidates.

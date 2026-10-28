@@ -261,6 +261,18 @@
   background: var(--glsw-bg-subtle);
 }
 
+.glsw-refresh {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  color: inherit;
+}
+
+.glsw-refresh:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
 .glsw-more {
   margin: 8px 0 0;
 }

@@ -171,6 +171,40 @@ async function remove(origin: string): Promise<void> {
     </section>
 
     <section>
+      <h2>Updates</h2>
+      <p class="ui-muted">
+        While a merge request is open, its pipeline is checked again in the background, so reports
+        appear as scan jobs finish and a push is picked up without reloading the page. A finished
+        pipeline is checked half as often. Background tabs are not checked.
+      </p>
+
+      <label class="ui-field">
+        <input v-model="current.autoRefresh" type="checkbox" />
+        <span>Update the widget automatically</span>
+      </label>
+
+      <label class="ui-field field-block">
+        <span>Seconds between checks</span>
+        <input
+          class="ui-input ui-number"
+          type="number"
+          :min="SETTING_LIMITS.refreshIntervalSeconds.min"
+          :max="SETTING_LIMITS.refreshIntervalSeconds.max"
+          step="5"
+          :value="current.refreshIntervalSeconds"
+          :disabled="!current.autoRefresh"
+          @change="commitNumber('refreshIntervalSeconds', $event)"
+        />
+        <span class="ui-muted hint">
+          Each check is two requests per open merge request tab, plus a job listing while the
+          pipeline runs. From
+          {{ SETTING_LIMITS.refreshIntervalSeconds.min }} to
+          {{ SETTING_LIMITS.refreshIntervalSeconds.max }}.
+        </span>
+      </label>
+    </section>
+
+    <section>
       <h2>Target branch comparison</h2>
       <p class="ui-muted">
         Reads the target branch's own security reports as well, so findings this merge request

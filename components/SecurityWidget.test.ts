@@ -169,6 +169,22 @@ describe('SecurityWidget header', () => {
     expect(html).toContain('1 fixed here');
   });
 
+  it('does not call an empty list clean while scan jobs are still running', async () => {
+    const html = await render([report([])], {
+      progress: { unfinishedJobs: ['iac-sast'], jobNames: ['semgrep-sast', 'iac-sast'], awaitingDownstream: false },
+    });
+
+    expect(html).not.toContain('glsw-tone-success');
+    expect(html).toContain('No vulnerabilities so far, security scanning is still running');
+    expect(html).toMatch(/still running,\s+updates as jobs finish/);
+  });
+
+  it('offers a refresh once the results are in', async () => {
+    const html = await render([report([])]);
+
+    expect(html).toContain('aria-label="Refresh"');
+  });
+
   it('says which jobs are not checked for fixes while they still run', async () => {
     const html = await render([report([sqlInjection])], {
       base: [report([sqlInjection, hardcodedSecret])],
