@@ -232,6 +232,30 @@ describe('SecurityWidget search', () => {
     expect(html).not.toContain('hidden by filters');
   });
 
+  it('mirrors a severity search on the pills', async () => {
+    const html = await render([report([sqlInjection, hardcodedSecret])], {
+      query: 'sev:>=high',
+    });
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).not.toContain('glsw-pill-off');
+
+    const narrowed = await render([report([sqlInjection, hardcodedSecret])], {
+      query: 'sev:high',
+    });
+    expect(narrowed).toMatch(/glsw-sev-critical glsw-pill-off/);
+    expect(narrowed).not.toMatch(/glsw-sev-high glsw-pill-off/);
+  });
+
+  it('mirrors an is: search on the row labels', async () => {
+    const html = await render([report([sqlInjection, hardcodedSecret])], {
+      base: [report([sqlInjection])],
+      settings: { showOnlyNew: false },
+      query: 'is:new',
+    });
+    expect(html).toMatch(/aria-pressed="true" title="Filter by is:new">new:/);
+    expect(html).toMatch(/<li class="glsw-pill-off glsw-pill-lead"><button[^>]*>already there:/);
+  });
+
   it('says when a section has findings but none match', async () => {
     const html = await render([report([sqlInjection])], { query: 'file:*.ts' });
 

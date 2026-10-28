@@ -2,7 +2,16 @@
 import { computed, ref, shallowRef, useId, useTemplateRef, watch } from 'vue';
 import FindingItem from './FindingItem.vue';
 import SeverityPills from './SeverityPills.vue';
-import { compileQuery, QUERY_HELP, suggest, type Suggestion } from '@/lib/query';
+import {
+  compileQuery,
+  QUERY_HELP,
+  selectedSeverities,
+  selectedStatuses,
+  suggest,
+  toggleSeverity,
+  toggleStatuses,
+  type Suggestion,
+} from '@/lib/query';
 import { countBySeverity, severityRank } from '@/lib/severity';
 import type { Settings } from '@/lib/storage';
 import {
@@ -11,6 +20,7 @@ import {
   type Finding,
   type FindingStatus,
   type ParsedReport,
+  type Severity,
   type WidgetState,
 } from '@/lib/types';
 
@@ -32,6 +42,22 @@ const shown = ref<Record<string, number>>({});
 /** Lives only as long as the page: a search is a question, not a preference. */
 const query = shallowRef(props.initialQuery ?? '');
 const compiledQuery = computed(() => compileQuery(query.value));
+
+/** What the pills highlight: the severities the search is narrowed to. */
+const severitySelection = computed(() => selectedSeverities(query.value));
+/** …and the row labels: the statuses it is narrowed to with `is:`. */
+const statusSelection = computed(() => selectedStatuses(query.value));
+
+/** A pill click edits the search, and opens the list so its effect is seen. */
+function onToggleSeverity(severity: Severity): void {
+  query.value = toggleSeverity(query.value, severity);
+  collapsed.value = false;
+}
+
+function onToggleStatuses(statuses: FindingStatus[]): void {
+  query.value = toggleStatuses(query.value, statuses);
+  collapsed.value = false;
+}
 
 const searchInput = useTemplateRef<HTMLInputElement>('searchInput');
 const suggestionsId = useId();
@@ -217,6 +243,13 @@ const attentionLabel = computed(() => {
   return newVisible.value.length ? 'new or not compared:' : 'not compared:';
 });
 
+/** What clicking the label filters by: the statuses it names. */
+const attentionStatuses = computed<FindingStatus[] | undefined>(() => {
+  if (!comparison.value || !showSearch.value) return undefined;
+  if (!uncomparableVisible.value) return ['new'];
+  return newVisible.value.length ? ['new', 'uncomparable'] : ['uncomparable'];
+});
+
 /**
  * Pre-existing findings get their own row rather than being dropped: they are not
  * this merge request's doing, but they are still in the code being reviewed. Read
@@ -228,6 +261,14 @@ const existingFindings = computed(() =>
   (result.value?.reports ?? [])
     .flatMap((report) => report.findings)
     .filter((finding) => passesSeverityFilter(finding) && statusOf(finding) === 'existing'),
+);
+
+/**
+ * Show-only-new keeps these out of the list before the search sees them, so
+ * `is:existing` could only ever come back empty there.
+ */
+const existingStatuses = computed<FindingStatus[] | undefined>(() =>
+  showSearch.value && !props.settings.showOnlyNew ? ['existing'] : undefined,
 );
 
 const existingCounts = computed(() => countBySeverity(existingFindings.value));
@@ -473,8 +514,24 @@ const isCollapsible = computed(
           <SeverityPills
             :counts="comparison ? attentionCounts : visibleCounts"
             :label="attentionLabel"
+            :selected="severitySelection"
+            :interactive="showSearch"
+            :label-statuses="attentionStatuses"
+            :selected-statuses="statusSelection"
+            @toggle="onToggleSeverity"
+            @toggle-statuses="onToggleStatuses"
           />
-          <SeverityPills v-if="comparison" :counts="existingCounts" label="already there:" />
+          <SeverityPills
+            v-if="comparison"
+            :counts="existingCounts"
+            label="already there:"
+            :selected="severitySelection"
+            :interactive="showSearch"
+            :label-statuses="existingStatuses"
+            :selected-statuses="statusSelection"
+            @toggle="onToggleSeverity"
+            @toggle-statuses="onToggleStatuses"
+          />
         </template>
 
         <p class="glsw-sub">

@@ -185,6 +185,33 @@
   color: var(--glsw-text);
 }
 
+.glsw-pill-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 -5px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+}
+
+.glsw-pill-button:hover {
+  background: var(--glsw-bg-subtle);
+  border-color: var(--glsw-border);
+}
+
+/* Picked in the search. */
+.glsw-pill-button.glsw-pill-on {
+  border-color: var(--glsw-pill-color);
+}
+
+/* Left out by the search. */
+.glsw-pill-off {
+  opacity: 0.45;
+}
+
 /* Says what the pills are counting, when it is not simply every finding. */
 .glsw-pill-lead {
   font-size: 12px;

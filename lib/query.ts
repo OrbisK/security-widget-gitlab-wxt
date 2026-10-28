@@ -70,6 +70,9 @@ interface Token {
   text: string;
   /** Whether a quote opened the token, which keeps `"a:b"` a plain search. */
   quotedStart: boolean;
+  /** Where the token sits in the input, quotes included: `[start, end)`. */
+  start: number;
+  end: number;
 }
 
 function tokenize(input: string): Token[] {
@@ -78,14 +81,17 @@ function tokenize(input: string): Token[] {
   let inToken = false;
   let quotedStart = false;
   let inQuotes = false;
+  let start = 0;
 
-  for (const char of input) {
+  for (let index = 0; index < input.length; index++) {
+    const char = input[index];
+    if (!inToken && (char === '"' || !/\s/.test(char))) start = index;
     if (char === '"') {
       if (!inToken) quotedStart = true;
       inToken = true;
       inQuotes = !inQuotes;
     } else if (/\s/.test(char) && !inQuotes) {
-      if (inToken) tokens.push({ text, quotedStart });
+      if (inToken) tokens.push({ text, quotedStart, start, end: index });
       text = '';
       inToken = false;
       quotedStart = false;
@@ -94,7 +100,7 @@ function tokenize(input: string): Token[] {
       text += char;
     }
   }
-  if (inToken) tokens.push({ text, quotedStart });
+  if (inToken) tokens.push({ text, quotedStart, start, end: input.length });
   return tokens;
 }
 
@@ -255,6 +261,165 @@ export function compileQuery(input: string): CompiledQuery {
       );
     },
   };
+}
+
+/**
+ * A field whose values come from a fixed set, which the widget can show as
+ * buttons: the severities, and the statuses `is:` takes.
+ */
+interface Choice<T extends string> {
+  field: Field;
+  /** The key a new term is written with. */
+  key: string;
+  values: readonly T[];
+  /** Whether `matcher` lets a finding with this value through. */
+  admits(matcher: Matcher, value: T): boolean;
+  /** Whether a typed value belongs to the choice; `is:fp` does not. */
+  owns(value: string): boolean;
+}
+
+const SEVERITY_CHOICE: Choice<Severity> = {
+  field: 'severity',
+  key: 'sev',
+  values: SEVERITIES,
+  // The matchers only ever look at the severity.
+  admits: (matcher, severity) => matcher({ severity } as Finding, undefined),
+  owns: () => true,
+};
+
+const STATUSES = ['new', 'existing', 'uncomparable', 'fixed'] as const satisfies FindingStatus[];
+
+const STATUS_CHOICE: Choice<FindingStatus> = {
+  field: 'is',
+  key: 'is',
+  values: STATUSES,
+  admits: (matcher, status) => matcher({ likelyFalsePositive: false } as Finding, status),
+  owns: (value) => value.toLowerCase() !== 'fp',
+};
+
+interface ChoiceTerm {
+  token: Token;
+  /** The key as typed, so a rewrite can keep `severity:` rather than `sev:`. */
+  key: string;
+  negate: boolean;
+  values: string[];
+}
+
+/** The token as a term of the choice's field, or null when it is something else. */
+function choiceTerm(token: Token, choice: Choice<string>): ChoiceTerm | null {
+  if (token.quotedStart) return null;
+  let term = token.text;
+  let negate = false;
+  if (term.length > 1 && term.startsWith('-')) {
+    negate = true;
+    term = term.slice(1);
+  }
+  const field = /^([a-z]+):(.*)$/i.exec(term);
+  if (!field || !Object.hasOwn(FIELDS, field[1].toLowerCase())) return null;
+  if (FIELDS[field[1].toLowerCase() as keyof typeof FIELDS] !== choice.field) return null;
+  let rest = field[2];
+  if (rest.startsWith('!')) {
+    negate = !negate;
+    rest = rest.slice(1);
+  }
+  const values = rest.split(',').filter(Boolean);
+  // `is:new,fp` mixes in something no button stands for, so it is left alone.
+  if (!values.every((value) => choice.owns(value))) return null;
+  return { token, key: field[1], negate, values };
+}
+
+function choiceTerms(input: string, choice: Choice<string>): ChoiceTerm[] {
+  return tokenize(input)
+    .map((token) => choiceTerm(token, choice))
+    .filter((term) => term !== null);
+}
+
+/**
+ * The values the query's terms for the choice let through, or null when it has
+ * none — which the buttons read as "nothing picked" rather than "all of them".
+ * Every other term is ignored: this answers what is selected, not which
+ * findings match.
+ */
+function selected<T extends string>(input: string, choice: Choice<T>): Set<T> | null {
+  const included: Matcher[] = [];
+  const excluded: Matcher[] = [];
+  for (const term of choiceTerms(input, choice)) {
+    for (const value of term.values) {
+      const matcher = fieldMatcher(choice.field, value);
+      if (typeof matcher !== 'string') (term.negate ? excluded : included).push(matcher);
+    }
+  }
+  if (!included.length && !excluded.length) return null;
+
+  return new Set(
+    choice.values.filter(
+      (value) =>
+        (!included.length || included.some((matcher) => choice.admits(matcher, value))) &&
+        !excluded.some((matcher) => choice.admits(matcher, value)),
+    ),
+  );
+}
+
+/**
+ * Adds `values` to the query's selection for the choice, or takes them out if
+ * they are all in already — what clicking one of its buttons does. A plain list
+ * (`sev:info,low`) is edited in place and keeps its order; anything else
+ * (`sev:>=high`, negations, several terms) is spelled out as the list it amounts
+ * to first. The rest of the query is left as it was.
+ */
+function toggle<T extends string>(input: string, choice: Choice<T>, values: readonly T[]): string {
+  const terms = choiceTerms(input, choice);
+  const current = selected(input, choice);
+
+  const isValue = (value: string) => (choice.values as readonly string[]).includes(value);
+  const plain = terms.every(
+    (term) => !term.negate && term.values.every((value) => isValue(value.toLowerCase())),
+  );
+  let list: string[] =
+    current && plain
+      ? [...new Set(terms.flatMap((term) => term.values.map((value) => value.toLowerCase())))]
+      : choice.values.filter((value) => current?.has(value));
+  list = values.every((value) => list.includes(value))
+    ? list.filter((value) => !(values as readonly string[]).includes(value))
+    : [...list, ...values.filter((value) => !list.includes(value))];
+
+  const key = terms.find((term) => !term.negate)?.key ?? choice.key;
+  const replacement = list.length ? `${key}:${list.join(',')}` : '';
+
+  if (!terms.length) return [input.trimEnd(), replacement].filter(Boolean).join(' ');
+
+  // The first term becomes the new one, the others go, along with the
+  // whitespace after them so no gaps are left behind.
+  let output = '';
+  let last = 0;
+  terms.forEach(({ token }, index) => {
+    const keep = index === 0 && replacement;
+    let end = token.end;
+    if (!keep) while (end < input.length && /\s/.test(input[end])) end++;
+    output += input.slice(last, token.start) + (keep ? replacement : '');
+    last = end;
+  });
+  return (output + input.slice(last)).trim();
+}
+
+/** The severities the search narrows to; null when it does not. */
+export function selectedSeverities(input: string): Set<Severity> | null {
+  return selected(input, SEVERITY_CHOICE);
+}
+
+/** The statuses the search narrows to with `is:`; null when it does not. */
+export function selectedStatuses(input: string): Set<FindingStatus> | null {
+  return selected(input, STATUS_CHOICE);
+}
+
+/** What clicking a severity pill does to the search. */
+export function toggleSeverity(input: string, severity: Severity): string {
+  return toggle(input, SEVERITY_CHOICE, [severity]);
+}
+
+/** What clicking a status label does to the search, e.g. "new or not compared". */
+export function toggleStatuses(input: string, statuses: readonly FindingStatus[]): string {
+  return toggle(input, STATUS_CHOICE, statuses);
 }
 
 export interface Suggestion {
