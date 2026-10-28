@@ -142,10 +142,19 @@ jobs:
       # Submission runs after the release upload, so a rejected submission still
       # leaves installable zips behind. Each store is skipped while its secrets
       # are missing.
+      #
+      # FIREFOX_RELEASE_NOTES is not a stock `wxt submit` option; it comes from
+      # our patch to publish-browser-extension (patches/). The notes are the
+      # release body uppt wrote, reduced to plain text for AMO.
       - name: Submit to Firefox Add-ons
         id: submit-firefox
         if: env.FIREFOX_JWT_ISSUER != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
+          gh release view "$TAG" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          FIREFOX_RELEASE_NOTES="$(node scripts/release-notes.mjs "$RUNNER_TEMP/release-body.md" \
+            "$(gh release view "$TAG" --json url --jq .url)")" \
           pnpm exec wxt submit \
             --firefox-zip .output/*-firefox.zip \
             --firefox-sources-zip .output/*-sources.zip

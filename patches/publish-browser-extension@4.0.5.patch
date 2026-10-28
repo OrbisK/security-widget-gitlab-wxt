@@ -1,0 +1,56 @@
+diff --git a/dist/init-yCWd5sZ8.mjs b/dist/init-yCWd5sZ8.mjs
+index 3ebd6d5d6c30392b04a81dc85d8ec6f08f4533a6..d292413642097d35a5eae016eafee91927d3c2e6 100644
+--- a/dist/init-yCWd5sZ8.mjs
++++ b/dist/init-yCWd5sZ8.mjs
+@@ -348,6 +348,16 @@ var AddonsApi = class {
+ 		});
+ 	}
+ 	/**
++	* Docs: https://addons-server.readthedocs.io/en/latest/topics/api/addons.html#version-edit
++	*/
++	versionEdit(params) {
++		return fetch(`${this.addonVersionCreateEndpoint(params.extensionId).href}${params.versionId}/`, {
++			method: "PATCH",
++			body: params.body,
++			headers: { Authorization: this.getAuthHeader() }
++		});
++	}
++	/**
+ 	* See https://addons-server.readthedocs.io/en/latest/topics/api/auth.html
+ 	*/
+ 	createJwt(timeoutInS = 30) {
+@@ -381,7 +391,8 @@ const FirefoxAddonStoreOptions = z.object({
+ 	extensionId: z.string().min(1).trim(),
+ 	jwtIssuer: z.string().min(1).trim(),
+ 	jwtSecret: z.string().min(1).trim(),
+-	channel: z.enum(["listed", "unlisted"]).default("listed")
++	channel: z.enum(["listed", "unlisted"]).default("listed"),
++	releaseNotes: z.string().optional()
+ });
+ var FirefoxAddonStore = class {
+ 	api;
+@@ -409,6 +420,14 @@ var FirefoxAddonStore = class {
+ 			uploadUuid: upload.uuid
+ 		});
+ 		const validationUrl = `https://addons.mozilla.org/en-US/developers/addon/${addon.id}/file/${version.file.id}/validation`;
++		if (this.options.releaseNotes) {
++			this.setStatus("Setting release notes");
++			await this.api.versionEdit({
++				extensionId: this.extensionId,
++				versionId: version.id,
++				body: { release_notes: { "en-US": this.options.releaseNotes } }
++			});
++		}
+ 		const { errors, notices, warnings } = upload.validation;
+ 		this.setStatus(`Validation results: ${plural(errors, "error")}, ${plural(warnings, "warning")}, ${plural(notices, "notice")}`);
+ 		if (!upload.valid) throw Error(`Extension is invalid: ${validationUrl}`);
+@@ -474,7 +493,8 @@ function resolveConfig(config) {
+ 			extensionId: config.firefox?.extensionId ?? stringEnv("FIREFOX_EXTENSION_ID"),
+ 			jwtIssuer: config.firefox?.jwtIssuer ?? stringEnv("FIREFOX_JWT_ISSUER"),
+ 			jwtSecret: config.firefox?.jwtSecret ?? stringEnv("FIREFOX_JWT_SECRET"),
+-			channel: config.firefox?.channel ?? stringEnv("FIREFOX_CHANNEL") ?? "listed"
++			channel: config.firefox?.channel ?? stringEnv("FIREFOX_CHANNEL") ?? "listed",
++			releaseNotes: config.firefox?.releaseNotes ?? stringEnv("FIREFOX_RELEASE_NOTES")
+ 		},
+ 		edge: edgeZip == null ? void 0 : {
+ 			zip: edgeZip,
