@@ -1,0 +1,2 @@
+patchedDependencies:
+  publish-browser-extension@4.0.5: patches/publish-browser-extension@4.0.5.patch
