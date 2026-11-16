@@ -208,12 +208,11 @@ const PIPELINE_LOOKUP_PAGE_SIZE = 10;
  * readable reports.
  *
  * The merge base comes first because it is the only apples-to-apples comparison:
- * the target branch as this merge request left it, which is what GitLab's own
- * `base_pipeline` uses. Branches whose merge base has no pipeline at all are
- * common enough — pipelines expire, and not every project builds every commit —
- * that the target branch's latest finished pipeline is worth falling back to,
- * with the caveat that it can contain commits this merge request never saw. The
- * strategy travels with the candidate so the widget can say which it used.
+ * the target branch as this merge request left it. Branches whose merge base has
+ * no pipeline at all are common enough — pipelines expire, and not every project
+ * builds every commit — that the target branch's latest finished pipeline is
+ * worth falling back to, with the caveat that it can contain commits this merge
+ * request never saw. The strategy travels with the candidate so the widget can say which it used.
  *
  * Everything here is looked up in the *target* project, which is where the
  * target branch and its pipelines live even when the merge request comes from a

@@ -155,10 +155,9 @@ export type FindingStatus = 'new' | 'existing' | 'uncomparable' | 'fixed';
  * The pipeline the comparison was made against, and how it was chosen — the two
  * strategies support different claims, so the widget names the one it used.
  *
- * `merge-base` is the pipeline for the commit this merge request branched from,
- * which is what GitLab's own comparison uses. `target-branch` is the target
- * branch's latest finished pipeline, used when the merge base has none; it can
- * include commits this merge request never saw.
+ * `merge-base` is the pipeline for the commit this merge request branched from.
+ * `target-branch` is the target branch's latest finished pipeline, used when the
+ * merge base has none; it can include commits this merge request never saw.
  */
 export interface BasePipeline {
   strategy: 'merge-base' | 'target-branch';
