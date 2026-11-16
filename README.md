@@ -3,8 +3,8 @@
 > [!WARNING]
 > Early work in progress. It works, and it is not settled: expect breaking changes, no upgrade path
 > between versions, and rough edges on GitLab layouts it has not been tried against. It reads your
-> reports and renders them — that part is safe by construction — but do not treat what it shows as a
-> complete picture of your security posture yet. Bug reports with a `console.debug` trail are welcome.
+> reports and renders them, but do not treat what it shows as a complete picture of your security
+> posture yet. Bug reports with a `console.debug` trail are welcome.
 
 > [!IMPORTANT]
 > This extension is not affiliated, endorsed, sponsored, or approved with or by GitLab Inc.
@@ -21,44 +21,35 @@ told apart from the ones the branch already had.
 
 ## Why
 
-On GitLab Free and Premium, two things are true at once: your pipeline finds vulnerabilities, and
-your merge request never mentions them.
+Your pipeline may already run [SAST](https://docs.gitlab.com/user/application_security/sast/) and
+[pipeline secret detection](https://docs.gitlab.com/user/application_security/secret_detection/pipeline/).
+The analyzers write what they find to a report artifact on the job. Seeing those findings during
+review means noticing which jobs produced a report, opening each one, downloading the JSON and
+reading it, once per scanner and on every merge request. In practice that step gets skipped, and a
+finding nobody reads protects nothing.
 
-[SAST](https://docs.gitlab.com/user/application_security/sast/) and
-[pipeline secret detection](https://docs.gitlab.com/user/application_security/secret_detection/pipeline/)
-are available in every tier — the templates run, the analyzers report what they find, and the
-findings land in a report artifact. Displaying those findings is the separately priced part.
-GitLab's own comparison tables put the downloadable JSON report under Free and Premium, and "new
-findings in merge request reports" under Ultimate.
-
-So the data is already there and your session can already fetch it; reading it is what costs. A
-reviewer has to notice that some job produced an artifact, open that job, download a JSON file, and
-read it — once per scanner, on every merge request. At that price nobody does it, and a finding
-nobody reads protects nothing. Scanning in CI is only worth the minutes it burns if the results
-reach the review, which is exactly where they stop being free.
-
-It shows you what your own pipeline wrote and your own session can already fetch — it adds no data
-and unlocks no reports. Scanners whose CI templates are subscription-gated never run in the first
-place, so there is nothing for the widget to read; where a scanner does run, its artifact is served
-to you by the same route GitLab's own "Download results" button uses.
+This extension does that step for you. With your existing session, it reads the reports from the
+merge request's pipeline and the target branch's, then summarizes them above the merge widget so you
+can see which findings this change introduces. It only reads files you can already download
+yourself, through the same route as the job page's "Download results" button, and it changes
+nothing on GitLab.
 
 ## Before and after
 
-One Free-tier project, one merge request, one pipeline running SAST and secret detection. The only
-difference between the two screenshots is whether the extension is installed — neither is Ultimate.
+One project, one merge request, one pipeline running SAST and secret detection. The only difference
+between the two screenshots is whether the extension is installed.
 
-**Free tier, without the extension** — the pipeline is green and the page says nothing about what
-the scanners found. The report artifacts exist, but reaching them means opening the job and
-downloading the JSON.
+**Without the extension** — the pipeline is green and the page says nothing about what the scanners
+found. The report artifacts exist, but reaching them means opening the job and downloading the JSON.
 
-![A merge request on a Free-tier GitLab project without the extension: the merge widget reports a
-passed pipeline, and no security findings appear anywhere on the page](.github/assets/before.png)
+![A merge request without the extension: the merge widget reports a passed pipeline, and no security
+findings appear anywhere on the page](.github/assets/before.png)
 
-**Free tier, with the extension** — same project, same pipeline, same session. The findings the
-artifacts already contained, grouped by report type and severity, above the merge widget.
+**With the extension** — same project, same pipeline, same session. The findings the artifacts
+already contained, grouped by report type and severity, above the merge widget.
 
-![The same Free-tier merge request with the extension installed: a security summary above the merge
-widget listing findings by severity, grouped per report type](.github/assets/after.png)
+![The same merge request with the extension installed: a security summary above the merge widget
+listing findings by severity, grouped per report type](.github/assets/after.png)
 
 ## Install
 
@@ -134,8 +125,7 @@ directly.
 The comparison runs after the head pipeline's findings are already on screen, and it needs a
 pipeline on the target branch to compare against:
 
-1. the pipeline for the merge base — the commit this merge request branched from, which is what
-   GitLab's own comparison uses;
+1. the pipeline for the merge base — the commit this merge request branched from;
 2. failing that, the target branch's latest finished pipeline, which can contain commits this merge
    request never saw.
 
@@ -240,8 +230,7 @@ console's **Verbose** level — switch that on and reload. Look for:
 
 ## Known limits
 
-- **New-vs-existing is a heuristic, not GitLab's vulnerability database.** GitLab Ultimate tracks a
-  finding as a record with a history; this matches two reports against each other on rule identifier
+- **New vs. existing is a heuristic:** it matches two reports against each other on rule identifier
   and location. An analyzer upgrade that renames a rule, or a file that moved, will read as newly
   introduced. It errs that way on purpose — over-reporting a finding as new is safer than passing a
   new one off as pre-existing — which is also why **show only new findings** is off by default.
